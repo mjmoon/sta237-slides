@@ -1,0 +1,957 @@
+---
+title: "Lecture 2: Conditional Probability and Independence"
+subtitle: "STA237: Probability, Statistics, and Data Analysis I"
+author: "Michael Jongho Moon"
+institute: "PhD Student, DoSS, University of Toronto"
+date: "May 10, 2023"
+date-format: full
+format:
+  revealjs:
+    width: 1280
+    height: 720
+    theme: [default, ../theme.scss]
+    css: "style.css"
+    chalkboard: true
+    footer: |
+      &copy; 2023. Michael J. Moon. University of Toronto. 
+      
+      Sharing, posting, selling, or using this material
+      outside of your personal use in this course is
+      <strong>NOT</strong> permitted under any circumstances.
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(fontawesome)
+library(ggplot2)
+knitr::opts_chunk$set(eval = TRUE)
+palette(RColorBrewer::brewer.pal(8, "Accent"))
+# plot(1:5, col = 1:5, cex = 2, pch = 16)
+```
+
+# Example: 433 lottery winners {.half-title}
+
+::: {.incremental .column width="40%"}
+
++  433 won the grand prize
++  The winning numbers were multiples of 9,  
+`09-45-36-27-18-54`
++  Some people suspected this was due to a fraud
+
+:::
+
+:::: {.full-height .right}
+
+<img src="img/lottery-nyt.png" alt-text="NYT article on 433 lottery winners" width="80%" height="720px"/>
+
+::::
+
+## Must be a fraud because ... {.half-title}
+
+:::::: {.columns}
+::::: {.column .fragment width="45%"}
+
+### The combination looks suspicious
+
+`(9x1, 9x2, 9x3, 9x4, 9x5, 9x6)`
+
+:::::
+::::: {.column width="5%"}
+:::::
+::::: {.column .fragment width="50%"}
+
+### If it was not a fraud ...
+
+:::: {.incremental .nobullet}
+::: {}
++ The probabilty of drawing  
+`(9, 9x2, 9x3, 9x4, 9x5, 9x6)`  
+from integers between 1 and 55
+:::
+:::{}
++ $=1\left/\binom{55}{6}\right.\approx 3\left/10^8\right.$
+:::
+::: {}
++ $=$ The probabilty of drawing  
+$\phantom{=}$ any combination of 6 numbers.
+:::
+::::
+::::::
+:::::::
+
+## Must be a fraud because ... {.half-title}
+
+:::::: {.columns}
+::::: {.column .fragment width="45%"}
+
+### There are too many winners
+
+:::: {.incremental .nobullet .r-fit-text}
+::: {}
++ The probabilty of 2 people picking the same combination of 6 numbers   
+:::
+::: {}
++ $=$(# possible combinations)  
+$\phantom{=}\times P($first person picking the combination$)$  
+$\phantom{=}\times P($second person picking the combination$)$
+:::
+::: {}
++ $=\binom{55}{6}\cdot 1\left/\binom{55}{6}\right. \cdot 1\left/\binom{55}{6}\right.\approx3\left/10^8\right.$.
+:::
+::: {}
++  433 sharing the same combination is even less likely.
+:::
+::::
+
+:::::
+::::: {.column width="5%"}
+:::::
+::::: {.column .fragment width="50%"}
+
+### It assume they all picked the numbers randomly ...
+
+:::: {.r-fit-text}
+::: {.incremental}
+
++  9 is considered a lucky number by many  
+e.g., <figure class="text-center"><img src="img/jiu.png" title="Chinese character JIU" width="30%" /><figcaption><i>https://dictionary.writtenchinese.com/</figcaption></i></figure>
++  People are more likely select numbers they consider lucky
+
+:::
+::::
+
+::::::
+:::::::
+
+## Must be a fraud because ... {.half-title}
+
+:::::: {.columns}
+::::: {.column .fragment width="45%"}
+
+### I played the same sequence multiple times but never won
+
+::: {.r-fit-text}
+`9` must be a lucky number and should appear more often.
+:::
+
+:::::
+::::: {.column width="5%"}
+:::::
+::::: {.column .fragment width="50%"}
+
+### If each draw is consistently executed ...
+
+:::: {.r-fit-text}
+::: {.incremental}
+
++  Does the probability of drawing `(9, 9x2, 9x3, 9x4, 9x5, 9x6)` in the next
+draw change knowing it was drawn today?
++  What is the [**conditional probability**]{.accent-five} of drawing the combination in the
+next draw _given_ that it was drawn today?
++  Do the draws depend on each other? Or, are they [**independent**]{.accent-five}?
+
+:::
+::::
+
+::::::
+:::::::
+
+# Conditional probability {.half-title}
+
+::::: {.full-height .right}
+
+In general,
+
+::: {.definition}
+The **conditional probability** of event $A$ given event $C$ is defined as
+
+$$P(A|C)=\frac{P(A\cap C)}{P(C)}$$
+
+for any event $C$ such that $P(C)>0$.
+:::
+
+:::: {.fragment}
+
+Alternatively,
+
+::: {.definition}
+**The multiplication rule** states that for any events $A$ and $C$,
+
+$$P(A\cap C)=P(A|C)\cdot P(C).$$
+:::
+::::
+:::::
+
+## Example: Sharing a birthday {.center}
+
+::::::: {.r-fit-text}
+:::::: {.columns}
+::::: {.column}
+
+Suppose 3 students are randomly selected from a class.
+
+What is the probability that all three have different birthdays?
+
+Assume they are all born in a non-leap year.
+
+:::::
+::::: {.column}
+:::::
+::::::
+:::::: {.columns .fragment}
+::::: {.column}
+
+
+### Experiment
+
+Picking 3 students _randomly_.
+
+### Outcome
+
+$$(b_1, b_2, b_3)$$
+
+:::::
+::::: {.column}
+
+### Sample space
+
+$$\Omega =\left\{\begin{split} \\ (\text{Jan 1}, &\text{Jan 1}, &\text{Jan 1}), \\ (\text{Jan 1}, &\text{Jan 1}, &\text{Jan 2}), \\ (\text{Jan 1}, &\text{Jan 1}, &\text{Jan 3}), \\ &\quad\vdots& \end{split}\right\}$$
+
+:::::
+::::::
+:::::::
+
+## {}
+
+Let's first consider the event that the first two birthdays are both January 1st, $b^*$.
+
+:::::: {.columns}
+::::: {.column width="40%"}
+
+Denote 
+
+::: {.nobullet}
++  event that $b_1= b_2$ with $A$ and
++  event that $b_1=b^*$ with $C$.
+:::
+
+:::::
+::::: {.column width="60%"}
+
+::: {.fragment}
+$$P\left(C\right)=\frac{1}{365}$$
+
+
+$$P\left(A\cap C\right)=\frac{1}{365^2}$$
+
+:::
+
+::: {.fragment}
+
+$$P\left(A\left\lvert C\right.\right)=\frac{1}{365^2}\left/\frac{1}{365}\right.=\frac{1}{365}$$
+:::
+
+::: {.fragment}
+$$=\frac{\text{# days that is January 1st}}{\text{# possible days for }b_2}$$
+:::
+:::::
+::::::
+
+## {}
+
+:::::: {.columns}
+::::: {.column}
+
+### Events
+
+$$B_{12}=\left\{\left(b_1,b_2,b_3\right):b_1=b_2\right\}$$
+
+$$B_{13}=\left\{\left(b_1,b_2,b_3\right):b_1=b_3\right\}$$
+
+$$B_{23}=\left\{\left(b_1,b_2,b_3\right):b_2=b_3\right\}$$
+
+### Probability of interest
+
+::: {.fragment}
+
+$$P\left(B_{12}^c \cap B_{13}^c \cap B_{23}^c\right)$$
+
+:::
+
+:::::
+::::: {.column}
+
+::: {.fragment .note}
+The probability of two people sharing a birthday on January 1st is $\frac{1}{365^2}$.
+:::
+
+
+::: {.note .fragment}
+There are 365 disjoint events where two people share a birthday in a year.
+:::
+
+:::: {.fragment}
+$$P\left(B_{12}\right)=365 \times \frac{1}{365^2}=\frac{1}{365}$$
+$$\implies P\left(B_{12}^c\right)=1-P\left(B_{12}\right)=\frac{364}{365}$$
+::::
+
+:::::
+::::::
+
+## {}
+
+:::::: {.columns}
+::::: {.column}
+
+### Events
+
+$$B_{12}=\left\{\left(b_1,b_2,b_3\right):b_1=b_2\right\}$$
+
+$$B_{13}=\left\{\left(b_1,b_2,b_3\right):b_1=b_3\right\}$$
+
+$$B_{23}=\left\{\left(b_1,b_2,b_3\right):b_2=b_3\right\}$$
+
+### Probability of interest
+
+$$P\left(B_{12}^c \cap B_{13}^c \cap B_{23}^c\right)$$
+
+::: {.fragment}
+$$=\color{darkblue}{P\left(B_{13}^c \cap B_{23}^c \left\lvert B_{12}^c\right.\right)}P\left(B_{12}^c\right)$$
+:::
+:::::
+::::: {.column}
+
+:::: {.note}
+We can compute $P\left(B_{12}^c \cap B_{13}^c \cap B_{23}^c\right)$
+if we know the conditional probability that the third person doesn't share 
+a birthday with either of the first two given the first pair doesn't share
+a birthday.
+::::
+
+::: {.incremental .nobullet}
++  $P\left(B_{13}^c \cap B_{23}^c \left\lvert B_{12}^c\right.\right)$
++  $=\frac{\text{# days that do not overlap with the first 2}}{\text{# possible days for }b_3}$
+:::
+::: {.note .fragment}
+We know _# days that do not overlap with the first 2_ is $365-2$ because we know 
+they don't share a birthday.
+:::
+::: {.incremental .nobullet}
++  $=\frac{363}{365}$
+:::
+
+::::: 
+::::::
+
+
+## {}
+
+:::::: {.columns}
+::::: {.column}
+
+### Events
+
+$$B_{12}=\left\{\left(b_1,b_2,b_3\right):b_1=b_2\right\}$$
+
+$$B_{13}=\left\{\left(b_1,b_2,b_3\right):b_1=b_3\right\}$$
+
+$$B_{23}=\left\{\left(b_1,b_2,b_3\right):b_2=b_3\right\}$$
+
+### Probability of interest
+
+$$P\left(B_{12}^c \cap B_{13}^c \cap B_{23}^c\right)$$
+
+:::::
+::::: {.column}
+
+$$P\left(B_{12}^c \cap B_{13}^c \cap B_{23}^c\right)$$
+$$=\frac{363}{365}\cdot\frac{364}{365}$$
+$$=\frac{363\times364}{365^2}$$
+
+::::: 
+::::::
+
+
+## Example: Guessing a multiple choice question
+
+:::::: {.columns .fragment}
+::::: {.column}
+:::{.r-fit-text}
+
+_(adopted from Dekking et al 3.10)_
+
+Suppose Michael knows the answer to a multiple choice question with a probability of **3/5**.
+
+When he does not know the answer, he picks an answer out of **4** choices at random. Even when Michael knows the answer, he is prone to making mistakes and answers the question correctly with a probability of **4/5**.
+
+What is the probability that Michael correctly answers a mutiple choice question?
+
+:::
+
+:::::
+::::: {.fragment .column}
+
+### Events
+
+::: {.fragment}
+
+$K$: Michael knows the answer
+
+$Y$: Michael answers correctly
+
+:::
+
+<br />
+
+### Probabilities
+
+::: {.fragment}
+
+$$P(K)=3/5$$
+
+$$P(Y\left|K^c\right.)=1/4$$
+
+$$P(Y\left|K\right.)=4/5$$
+
+:::
+
+:::::
+::::::
+
+## {}
+
+::::: {.columns}
+:::: {.column width="30%"}
+
+### Knows
+
+::::
+:::: {.column width="5%"}
+::::
+:::: {.column width="30%"}
+
+### Answers
+
+::::
+:::: {.column width="5%"}
+::::
+:::: {.column width="30%"}
+::::
+:::::
+
+::::: {.columns .fragment data-fragment-index="0"}
+:::: {.column width="30%"}
+$$K$$
+::::
+:::: {.column width="5%"}
+::::
+:::: {.column .fragment width="30%" data-fragment-index="1"}
+::: {.accent-five}
+$$Y|K$$
+:::
+$$Y^c|K$$
+::::
+:::: {.column width="5%"}
+::::
+:::: {.column width="30%" .fragment data-fragment-index="2" .accent-five}
+
+$$Y\cap K$$
+
+_Knows and answers correctly_
+
+::::
+:::::
+
+::::: {.columns .fragment data-fragment-index="0"}
+<hr />
+:::: {.column width="30%"}
+
+$$K^c$$
+
+::::
+:::: {.column width="5%"}
+::::
+:::: {.column .fragment width="30%" data-fragment-index="1"}
+::: {.accent-five}
+$$Y|K^c$$
+:::
+
+$$Y^c|K^c$$
+
+::::
+:::: {.column width="5%"}
+::::
+:::: {.column width="30%" .fragment data-fragment-index="2" .accent-five}
+
+$$Y\cap K^c$$
+
+_Doesn't know and answers correctly_
+
+::::
+:::::
+
+. . .
+
+<br />
+
+::: {.accent-five}
+$$P(Y)=P(Y | K)P(K) + P(Y | K^c)P(K^c)$$
+:::
+
+# The Law of Total Probability {.half-title}
+
+::::: {.full-height .right}
+
+::: {.definition}
+
+Suppose $C_1,C_2,\ldots,C_m$ are _disjoint_ events such that $C_1\cup C_2\cup\cdots\cup C_m=\Omega$. 
+
+**The Law of Total Probability** states that 
+  
+$$P(A)=\sum_{i=1}^m\left[P(A\left|C_i\right.)P(C_i)\right]$$
+  
+for any arbitrary event $A$.
+:::
+:::::
+
+## $$P(\left.C_i\right|A)=?$$
+
+::::: {.columns}
+:::: {.column}
+
+$$P(\left.C_i\right|A)=\frac{P(C_i \cap A)}{P(A)}$$
+
+::::
+:::: {.column}
+::::
+:::::
+::::: {.columns .fragment}
+:::: {.column}
+
+$$=\frac{P(A |C_i )P(C_i)}{P(A)}$$
+
+::::
+:::: {.column}
+
+::: {.note}
+$P\left(C_i\cap A\right)=P\left(A\cap C_i\right)=P\left(A |C_i \right)P\left(C_i\right)$
+:::
+
+::::
+:::::
+::::: {.columns .fragment}
+:::: {.column}
+$$=\frac{P(A |C_i )P(C_i)}{\sum_{i=1}^m\left[P(A\left|C_i\right.)P(C_i)\right]}$$
+
+::::
+:::: {.column}
+
+::: {.note}
+Law of Total Probability
+:::
+
+::::
+:::::
+
+
+# Bayes' Rule {.half-title}
+
+::::: {.full-height .right}
+
+::: {.definition}
+
+Suppose $C_1,C_2,\ldots,C_m$ are _disjoint_ events such that $C_1\cup C_2\cup \cdots\cup C_m=\Omega$. 
+  
+**Bayes' Rule** states that the conditional probability of $C_i$ given an arbitrary event $A$ is
+  
+$$P(\left.C_i\right|A)=\frac{P(A\left|C_i\right.)\cdot P(C_i)}{  \sum_{i=1}^m\left[P(A\left|C_i\right.)P(C_i)\right]}.$$
+
+:::
+:::::
+
+## Example: Guessing a multiple choice question
+
+### Applying Bayes' rule
+
+::::: {.columns}
+:::: {.column}
+[Provided that Michael answered the question correctly]{.accent-five},
+what is the probability that Michael knew the answer?
+
+$$P(K)=3/5$$
+
+$$P(Y\left|K^c\right.)=1/4$$
+
+$$P(Y\left|K\right.)=4/5$$
+
+::::
+:::: {.column}
+::: {.incremental .nobullet}
++  $P\left(K\left\lvert Y\right.\right)$
++  $=\frac{P\left(Y\left\lvert K\right.\right)P\left(K\right)}{P\left(Y\left\lvert K\right.\right)P\left(K\right) + P\left(Y\left\lvert K^c\right.\right)P\left(K^c\right)}$
++  $=\frac{4/5\cdot3/5}{4/5\cdot3/5+1/4\cdot2/5}$
++  $=\frac{24}{29}\approx0.828$
+:::
+::::
+:::::
+
+
+# Independence {.half-title}
+
+::::: {.full-height .right}
+
+_What does it mean for two events to be independent?_
+
+<br />
+
+::: {.fragment .note}
+(Michael answers a question correctly today) & (it rains tomorrow) are independent. 
+:::
+
+::: {.fragment .note}
+(Michael answers a question correctly) & (Michael gets stuck on a subway delay on the test day)
+may not be independent.
+:::
+
+::::: 
+
+# Independence {.half-title}
+
+::::: {.full-height .right}
+
+::: {.definition}
+An event $A$ is called **independent of** $B$ if
+
+$$P(A|B)=P(A).$$
+:::
+
+<br />
+
+::: {.fragment}
+
+That is, whether event $B$ occurs or not  
+does **NOT** change the probability of $A$.
+
+:::
+:::::
+
+## Example: Guessing a multiple choice question
+
+$$P(K)=\frac{3}{5} < \frac{24}{29} = P(K|Y)$$
+
+::: {.incremental .nobullet}
+
++   Suppose you were Michael's instructor. Before the exam, your confidence on his knowledge about the question wasn't too high.
++   When you find out he answered the question correctly, you are more confident that he knows the material.
++   The correctness of his answer adds extra information about Michael's level of understanding on the course material. 
++   If the two events were independent, the question would not be a useful assessment.
+
+:::
+
+
+## Example: Sampling in R
+
+:::::: {.columns}
+::::: {.column}
+Consider  
+`samp <- sample(1:10, 5)`
+
+Let
+
+::: {.nobullet}
++ $A$ be the event that `samp[1]` is `10`
++ $B$ be the event that `samp[2]` is `10`
++ $C$ be the event that `samp[3]` is `5`
+:::
+
+Are they pairwise independent?
+
+:::::
+::::: {.column}
+
+::: {.incremental .nobullet}
++  $$P(B|A)=0$$ $\implies$ $A$ and $B$ are not independent.
++  $$P(C|A)>P(C)$$ $\implies$ $A$ and $C$ are not independent.
++  $$P(C|B)>P(B)$$ $\implies$ $B$ and $C$ are not independent.
+:::
+
+:::::
+::::::
+
+## Example: Sampling in R
+
+:::::: {.columns}
+::::: {.column}
+Consider  
+`samp <- sample(1:10, 5, replace = TRUE)`
+
+Let
+
+::: {.nobullet}
++ $A$ be the event that `samp[1]` is `10`
++ $B$ be the event that `samp[2]` is `10`
++ $C$ be the event that `samp[3]` is `5`
+:::
+
+Are they pairwise independent?
+
+:::::
+::::: {.column}
+
+::: {.nobullet}
++  $$P(B|A)=P(B)$$ $\implies$ $A$ and $B$ are independent.
++  $$P(C|A)=P(C)$$ $\implies$ $A$ and $C$ are independent.
++  $$P(C|B)=P(B)$$ $\implies$ $B$ and $C$ are independent.
+:::
+
+:::::
+::::::
+
+## {}
+
+:::::: {.columns}
+::::: {.column width="30%" .accent-five}
+
+### When
+
+$$P(A|B)=P(A)$$
+:::::
+::::: {.column width="70%"}
+
+
+### Implications
+
+::: {.fragment data-fragment-index="0"}
+
+**Complements**
+
+$P(A|B)=1-P(\left.A^c\right|B)$ and $P(A)=1-P(A^c)$,
+:::
+
+:::: {.accent-five}
+::: {.fragment data-fragment-index="1"}
+$$\implies 1-P(\left. A^c\right|B) = 1 - P(A^c)$$
+$$\implies P(A^c|B)=P(A^c)$$
+:::
+::::
+
+::: {.fragment data-fragment-index="2"}
+
+**Multiplication rule**
+
+$$P(A\cap B) = P(A|B)P(B)$$
+
+:::
+
+:::: { .accent-five}
+::: {.fragment data-fragment-index="3"}
+
+$$\implies P(A\cap B)=P(A)P(B)$$
+
+:::
+::::
+:::::
+::::::
+
+## {}
+
+:::::: {.columns}
+::::: {.column width="30%" .accent-five}
+
+### When
+
+$$P(A|B)=P(A)$$
+
+:::::
+::::: {.column width="70%"}
+
+**Mutual property**
+
+$$P(B|A) = \frac{P(A\cap B)}{P(A)}$$
+
+::: {.fragment}
+
+$$=\frac{P(A)P(B)}{P(A)}=P(B)$$
+
+:::
+::: {.fragment .accent-five}
+
+$$\implies P(B| A)=P(B)$$
+
+:::
+
+:::::
+::::::
+
+
+## {.center}
+
+::::: {.columns .accent-five}
+:::: {.column}
+
+$$\phantom{a}$$
+$$P(A|B)=P(A)$$
+
+::::
+:::: {.column}
+$$\iff P(A^c|B)=P(A^c)$$
+$$\iff P(A\cap B)=P(A)P(B)$$
+$$\iff P(B| A)=P(B)$$
+::::
+:::::
+
+::: {.fragment .text-center}
+
+To show that $A$ and $B$ are **independent**,  
+it suffices to prove any one of the above.
+
+:::
+
+::: {.fragment .text-center}
+
+If you show that any one of them is not true,  
+you show that the two events are **dependent**.
+
+:::
+
+## Example: Rolling two fair dice
+
+:::::: {.columns}
+::::: {.column width="30%"}
+
+`r fontawesome::fa("dice", height="2em")`
+`r fontawesome::fa("dice", height="2em")`
+
+
+<br />
+
+You roll two fair dice.
+
+:::::
+
+::::: {.column width="5%"}
+:::::
+
+::::: {.column width="65%"}
+
+### Question 1
+
+$A$ is the event that _sum of the rolls is divisible by 4_,  
+$B$ is the event that _the two roll are the same_.
+
+Are $A$ and $B$ independent events?
+
+:::::
+::::::
+
+# Independence among more than two events {.half-title}
+
+::::: {.full-height .right}
+
+Using the alternative $P(A\cap B) = P(A)P(B)$ definition, we can expand the notion.
+
+<br />
+
+::: {.definition}
+Events $A_1,A_2,\ldots,A_m$ are called **independent** if
+
+$$P(A_1\cap A_2\cap \cdots \cap A_m)=\prod_{i=1}^m P(A_i).$$
+
+The statement holds when any number of events are replaced by their complements.
+:::
+
+:::::
+
+## Example: Rolling two fair dice
+
+:::::: {.columns}
+::::: {.column width="30%"}
+
+`r fontawesome::fa("dice", height="2em")`
+`r fontawesome::fa("dice", height="2em")`
+
+
+<br />
+
+You roll two fair dice.
+
+:::::
+
+::::: {.column width="5%"}
+:::::
+
+::::: {.column width="65%"}
+
+### Question 2
+
+$R_1$ is the event _the first throw is a 3_,  
+$R_2$ is the event _the second throw is a 3_.
+
+What is $P(R_1\cap R_2)$? 
+
+What is the probability of the event that $n$ consecutive throws are the same number?
+
+:::::
+::::::
+
+
+# R worksheet
+
+## Install `learnr` and run R worksheet {.half-title}
+
+:::: {.column width="45%"}
+1.   Click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main) to install `learnr` on [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+
+2.   Follow [this link](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Frlesson02&urlpath=shiny%2Frlesson02%2F&branch=main) to open the worksheet
+::::
+
+:::: {.full-height .right}
+
+<br />
+<br />
+
+If you see an error, try:
+
+::: {.note}
+1. Log in to [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2. Find `rlesson02` from _Files_ pane
+3. Click _Run Document_ 
+:::
+
+Other steps you may try:
+
+::: {.note}
+1.  Remove any `.Rmd` and `.R` files on the home directory of [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2.  In RStudio, 
+    i. Click `Tools` > `Global Options`
+    ii. Uncheck _"Restore most recently opened project at startup"_
+3.  Run `install.packages("learnr")` in RStudio after the steps above or click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main)
+:::
+
+::::
+
+# Summary
+
+::::: {.columns}
+:::: {.column}
+:::: 
+:::: {.column}
+
++  Conditional probability describes how two or more events are related in their likelihoods
++  Independent events do not change probability of each other when they occur
+
+::::
+:::::
+
+## Practice questions {.center}
+
+Chapter 3, [Dekking et al.](https://librarysearch.library.utoronto.ca/permalink/01UTORONTO_INST/14bjeso/alma991106910545806196)
+
++   Quick Exercises 3.2, 3.3, 3.8
++   All exercises from the chapter except 3.13
++   See a collection of corrections by the author [here](https://www.tudelft.nl/ewi/over-de-faculteit/afdelingen/applied-mathematics/applied-probability/education/mips)
+
+

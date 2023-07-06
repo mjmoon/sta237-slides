@@ -1,0 +1,1070 @@
+---
+title: "Lecture 6: Variable Transformation"
+subtitle: "STA237: Probability, Statistics, and Data Analysis I"
+author: "Michael Jongho Moon"
+institute: "PhD Student, DoSS, University of Toronto"
+date: "May 31, 2023"
+date-format: full
+format:
+  revealjs:
+    width: 1280
+    height: 720
+    theme: [default, ../theme.scss]
+    css: "style.css"
+    chalkboard: true
+    footer: |
+      &copy; 2023. Michael J. Moon. University of Toronto. 
+      
+      Sharing, posting, selling, or using this material
+      outside of your personal use in this course is
+      <strong>NOT</strong> permitted under any circumstances.
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(fontawesome)
+knitr::opts_chunk$set(eval = TRUE)
+palette(RColorBrewer::brewer.pal(8, "Accent"))
+# plot(1:5, col = 1:5, cex = 2, pch = 16)
+theme_sizes <- theme(
+    plot.title = element_text(size = 32),
+    plot.subtitle = element_text(size = 24),
+    axis.text = element_text(size = 20),
+    axis.title = element_blank(),
+    legend.text = element_text(size = 20)
+  )
+```
+
+
+# Example: My coffee shop {.half-title}
+
+```{r}
+#| echo: false
+coffee <- tibble(x = 0:15, d = dpois(0:15, 4)) |>
+  mutate(r = ifelse(x < 10, 2 * x - 10, 4 * x - 30))
+ggplot(coffee, aes(x = x, y = d)) +
+  theme_void() +
+  geom_hline(yintercept = 0) +
+  geom_segment(aes(xend = x, yend = 0, color = x == 4), 
+               show.legend = FALSE, linewidth = 3) +
+  scale_fill_manual(values = c("black", palette()[5]), 
+                    aesthetics = c("color", "fill")) +
+  scale_x_continuous(breaks = c(0), labels = c(0)) +
+  annotate("point", x = 4, y = -0.005, size = 10,
+           pch = 17, fill = palette()[5], color = palette()[5]) +
+  labs(title = "Probability mass function of D~Pois(4)")+
+  theme(axis.text.x = element_text(size = 22),
+        plot.title = element_text(size = 26, hjust = 0.5),
+        plot.title.position = "plot")
+```
+
+:::: {.full-height .right}
+
+<br />
+
+::: {.nobullet}
++  Recall Michael's coffee shop sees $D$ customers per day and $D\sim\text{Pois}(4)$.
++  We computed $E[D]=4$.
++  What is $\text{Var}(D)$?
+:::
+
+::::
+
+## $\text{Var}(D), D\sim\text{Pois}(\lambda)$
+
+::::::::: {.columns}
+:::::::: {.column width="30%"}
+:::: {.nobullet}
++  $E[D]=\lambda$
+::::
+::::::::
+:::::::: {.column width="70%"}
+:::: {.nobullet .incremental}
++  $E\left[D^2\right] 
+= \sum_{x=0}^\infty x^2 \frac{\lambda^x{\color{orange}{e^{-\lambda}}}}{x!}
+={\color{orange}{e^{-\lambda}}}\sum_{x=\color{red}{1}}^\infty \color{forestgreen}{x^2} \frac{\color{DarkOrchid}{\lambda^x}}{\color{forestgreen}{x!}}$
++  $\phantom{E\left[D^2\right]} = \color{DarkOrchid}{\lambda}{\color{orange}{e^{-\lambda}}} 
+\sum_{x=\color{red}{1}}^\infty \color{forestgreen}{x}\frac{\color{DarkOrchid}{\lambda^{x-1}}}{\color{forestgreen}{(x-1)!}}$
+::::
+::::: {.fragment}
+:::: {.note}
+$\sum x = \sum (x-1) + \sum 1$
+::::
+:::: {.nobullet}
++  $\phantom{E\left[D^2\right]} = \color{DarkOrchid}{\lambda}{\color{orange}{e^{-\lambda}}} 
+\left(\sum_{x=1}^\infty \color{forestgreen}{(x - 1)}\frac{\color{DarkOrchid}{\lambda^{x-1}}}{\color{forestgreen}{(x-1)!}} + \sum_{x=1}^\infty \frac{\color{DarkOrchid}{\lambda^{x-1}}}{\color{forestgreen}{(x-1)!}}\right)$
+::::
+:::::
+:::: {.nobullet  .incremental}
++  $\phantom{E\left[D^2\right]} =  \color{DarkOrchid}{\lambda}{\color{orange}{e^{-\lambda}}} 
+\left(\color{DarkOrchid}{\lambda}\sum_{\color{red}{x''=0}}^\infty \frac{\color{DarkOrchid}{\lambda^{x''}}}{\color{forestgreen}{x''!}} + \sum_{\color{red}{x'=0}}^\infty\frac{\color{DarkOrchid}{\lambda^{x'}}}{\color{forestgreen}{x'!}}\right)$
++  $\phantom{E\left[D^2\right]} =  \cdots = \lambda^2 + \lambda$
+::::
+::::::::
+:::::::::
+
+
+# Example: My coffee shop's profit {.half-title}
+
+```{r}
+#| echo: false
+coffeeprofit <- ggplot(coffee, aes(x = x, y = r)) +
+  theme_classic() +
+  geom_point(size = 3) +
+  geom_line(linetype = "dotted") +
+  scale_x_continuous(breaks = seq(0, 20, 5)) +
+  labs(x = "D", y = "R", title = "Profit vs. number of cups") +
+  theme(axis.text = element_text(size = 22),
+        axis.title = element_text(size = 24),
+        plot.title = element_text(size = 26, hjust = 0.5),
+        plot.title.position = "plot")
+coffeeprofit
+```
+
+
+:::: {.full-height .right}
+
+<br />
+
+Now suppose the coffee shop's profit is \$$R$ per day, given by
+
+$$R=g\left(D\right)=\begin{cases}
+  2D - 10 & 0 \le D < 10 \\
+  4D - 30 & D \ge 10
+\end{cases}$$
+
+Michael is interested in the distribution of $R$.
+
+::::
+
+## $E[R]$
+
+:::: {.nobullet .incremental}
++  $E[R] = E[g(D)]= \sum_{x\ge0}g(x)p_D(x)$
+::::
+::::: {.fragment}
+:::: {.note}
+$\sum_{u\in\mathbb{R}} u = \sum_{u<a} u + \sum_{u\ge a} u$
+::::
+:::: {.nobullet}
++  $\phantom{E[R]}=\sum_{x\in[0,10)}g(x)p_D(x) + \sum_{x\in[10,\infty)}g(x)p_D(x)$
+::::
+:::::
+:::: {.nobullet .incremental}
++  $\phantom{E[R]}=\sum_{x=0}^9\left(2x-10\right)p_D(x) + \sum_{x\ge 10}\left(4x-30\right)p_D(x)$
+:::
+:::: {.fragment}
+::: {.note}
+$\sum_{u<a} u = \sum_{u<a} u +\sum_{u\ge a} u-\sum_{u\ge a} u  = \sum_{u\in\mathbb{R}} u - \sum_{u \ge a} u$
+:::
+::: {.nobullet}
++  $\phantom{E[R]}=\color{forestgreen}{\sum_{x\ge0} \left(4x-30\right) p_D(x)} + \sum_{x=0}^9\left[\left(2x-10\right)\color{forestgreen}{-\left(4x-30\right)}\right]p_D(x)$
+:::
+::::
+:::: {.nobullet .incremental}
++  $\phantom{E[R]}=\color{forestgreen}{4E[D]-30} + \sum_{x=0}^9\left(-2x+20\right)p_D(x)$
++  $\phantom{E[R]}\approx\color{forestgreen}{-14} + 12.008 = -1.992$
+::::
+
+```{r echo=FALSE, eval=FALSE}
+-14 + sum(dpois(0:9, 4) * (-2 * (0:9) + 20)) 
+```
+
+## $\text{Var}(R)$
+
+:::: {.nobullet}
++  $\text{Var}(R)=E\left[R^2\right]-E\left[R\right]^2$
+::::
+
+:::: {.nobullet .incremental}
++  $E\left[R^2\right]=E\left[g(D)^2\right]$
++  $\phantom{E\left[R^2\right]}=\cdots=E\left[\left(4D-30\right)^2\right] - \sum_{x\in[0,10)}\left[\left(4x-30\right)^2 - \left(2x-10\right)^2\right]p_D(x)$
++  $\phantom{E\left[R^2\right]}=\cdots\approx 260 - 239.742$
++  $\phantom{E\left[R^2\right]}= 20.258$
+::::
+
+:::: {.nobullet .fragment}
+
++  $\text{Var}(R) \approx 20.258 - 1.992^2 = 16.290$
+::::
+
+```{r echo=FALSE, eval=FALSE}
+# E(D^2) = 16 + 4
+16 * (4^2 + 4) - 240 * 4 + 900
+sum(((2 * x - 10)^2 - (4 * x - 30)^2) * dpois(x, 4))
+x <- 0:9
+16 * (4^2 + 4) - 240 * 4 + 900 + sum(((2 * x - 10)^2 - (4 * x - 30)^2) * dpois(x, 4))
+
+20.258 - (1.992)^2
+```
+
+
+## But, I made [\$$20$]{.accent-five} yesterday! {.half-title .center}
+
+:::::: {.full-height .right}
+
+$$P(R\ge 20)=?$$
+
+::: {.fragment .note}
+To compute the probability, we need the full distribution.
+:::
+
+::::::
+
+
+# Variable transformation {.center}
+
+::: {.note}
+How transforming a variable changes the distribution.
+:::
+
+## Probabilities of equivalent events are the same {.half-title}
+
+::::: {.full-height .right}
+
+<br />
+
+:::: {.incremental .nobullet}
++  Recall that for $X\sim N(\mu, \sigma^2)$ and $Z\sim N(0,1)$, 
+$$P(X\le x)=P\left(Z\le \frac{x-\mu}{\sigma}\right)$$
+
++  ... because we know the events $\{X\le x\}$ and $\{Z \le (x-\mu)/\sigma\}$
+are equivalent events. i.e., we only changed the units in this case.
+
++  When computing the distribution of a transformed random variable, we can
+start by considering the events. i.e., $\{R\ge 20\}=\{D\ge 12.5\}$.
+::::
+
+:::::
+
+## Probabilities of equivalent events are the same {.half-title}
+
+:::: {.column width="45%"}
+$$F_{Y}(y)=P(g(X)\le y),\quad Y = g(X)$$
+::::
+
+::::: {.full-height .right}
+
+<br />
+
+:::: {.nobullet}
++  Recall that for $X\sim N(\mu, \sigma^2)$ and $Z\sim N(0,1)$, 
+$$P(X\le x)=P\left(Z\le \frac{x-\mu}{\sigma}\right)$$
+
++  ... because we know the events $\{X\le x\}$ and $\{Z \le (x-\mu)/\sigma\}$
+are equivalent events. i.e., we only changed the units in this case.
+
++  When computing the distribution of a transformed random variable, we can
+start by considering the events. i.e., $\{R\ge 20\}=\{D\ge 12.5\}$.
+::::
+
+:::::
+
+
+## Variable transformation of discrete random variables{.half-title .center}
+
+:::::: {.full-height .right}
+:::: {.definition}
+
+Let $X$ be a discrete random variable with probability mass function $p_X$ and $Y=g\left(X\right)$, where $g:\mathbb{R}\to\mathbb{R}$ is a function. 
+
+Then, $Y$ is also discrete and its probability mass function $p_Y$ is defined by
+
+$$p_Y(y)=\sum_{x\in g^{-1}\left\{y\right\}} p_X\left(x\right)$$
+
+where $g^{-1}\left\{y\right\}$ is the set of all values $X$ that satisfy $g\left(x\right)=y$.
+
+::::
+::::::
+
+## Example: My coffee shop's profit {.half-title .center}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+cup2profit <- ggplot(coffee, aes(x = x, y = r)) +
+  theme_void() +
+  geom_point(size = 3) +
+  geom_line(linetype = "dotted") +
+  geom_segment(aes(xend = x, yend = -15, y = -50 * d - 15), 
+               linewidth = 3, color = palette()[5]) +
+  geom_segment(aes(yend = r, x = -3, xend = -15 * d - 3), 
+               linewidth = 3, color = palette()[3]) +
+  scale_x_continuous(breaks = seq(0, 20, 5)) +
+  annotate("segment", x = -0.5, xend = 15.5, y = min(coffee$r) - 1, yend = min(coffee$r) - 1, 
+           color = "darkgrey") +
+  annotate("segment", x = -0.5, xend = -0.5, y = min(coffee$r) - 1, yend = max(coffee$r) + 1, 
+           color = "darkgrey") +
+  annotate("text", x = c(0, 5, 10, 15), y = -12, label = c(0, 5, 10, 15), size = 8, vjust = 1) +
+  annotate("text", x = -1, y = c(-10, 0, 10, 20, 30), 
+           label = c(-10, 0, 10, 20, 30),
+           size = 8, hjust = 1) +
+  annotate("text", x = 1, y = 9, label = "Profit vs.\nnumber of cups", size = 10, hjust = 0) +
+  annotate("text", x = 15, y = min(coffee$r), label = "D", vjust = 0, size = 8) +
+  annotate("text", x = 0, y = max(coffee$r), label = "R", vjust = 1, hjust = .5, size = 8) +
+  annotate("text", x = 10, y = -18, label = "p[D]", parse = TRUE, 
+           size = 12, color = palette()[5]) +
+  annotate("text", x = -5, y = 12, label = "p[R]", parse = TRUE, 
+           size = 12, color = palette()[3])
+cup2profit
+```
+
+
+:::: {.full-height .right}
+
+<br />
+
+::: {.nobullet}
++ $P(R\ge 20)=$
+:::
+
+::::
+
+## Example: My coffee shop's profit {.half-title .center}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+cup2profit +
+  annotate("segment", x = -.5, xend = 25/2, y = 20, yend = 20,
+           color = "red", linetype = "dotted", linewidth = 1) +
+  annotate("segment", x = 25/2, xend = 25/2, y = -11, yend = 20,
+           color = "red", linetype = "dotted", linewidth = 1) +
+  geom_point(shape = 1, color = "red", size = 7,
+             data = coffee |> filter(r > 20))
+```
+
+
+:::: {.full-height .right}
+
+<br />
+<br />
+
+::: {.nobullet}
++ $P(R\ge 20)=P(D\ge 12.5)$
++ $\phantom{P(R\ge 20)}<0.0005$
+:::
+
+::::
+
+## Example: Rolling a die {.half-title}
+
+:::: {.column width="45%"}
+```{r}
+exdis <- tibble(x = 1:6) %>%
+  mutate(y = x^2 - 3*x + 2)
+pex262 <- ggplot(exdis, aes(x = x, y = y)) +
+  theme_classic() +
+  geom_function(fun = function(x) x^2 - 3*x + 2, linetype = "dotted") +
+  geom_point(size = 5) +
+  scale_x_continuous(breaks = 0:6, limits = c(-1, 7)) +
+  labs(title = expression(paste("y = ", x^{2}, " - 3x + 2"))) +
+  theme(axis.text = element_text(size = 22),
+        axis.title = element_text(size = 24),
+        plot.title = element_text(size = 26, hjust = 0.5),
+        plot.title.position = "plot")
+pex262
+```
+::::
+
+
+:::: {.full-height .right}
+
+<br />
+
+Let $X$ be the outcome of a fair six-sided die roll and $Y=X^2-3X+2$. 
+
+Compute $P(Y=0)$.
+
+::::
+
+## Example: Rolling a die {.half-title}
+
+:::: {.column width="45%"}
+```{r}
+pex262 +
+  geom_hline(yintercept = 0, color = "red", linetype = "dotted", linewidth = 1) +
+  geom_point(shape = 1, color = "red", size = 7,
+             data = exdis |> filter(y == 0))
+```
+::::
+
+
+:::: {.full-height .right}
+
+<br />
+
+Let $X$ be the outcome of a fair six-sided die roll and $Y=X^2-3X+2$. 
+
+Compute $P(Y=0)$.
+
+::: {.note}
+Note that $Y=0$ when $X\in\left\{1, 2\right\}$.
+:::
+::: {.fragment .nobullet}
++ $P(Y=0)=P(X=1) + P(X=2)$
++ $\phantom{P(Y=0)}=\frac{2}{6}=\frac{1}{3}$
+:::
+
+::::
+
+
+## Example: Continuous to discrete
+
+:::::: {.columns}
+::::: {.column}
+
+Let $X\sim \text{U}(0,1)$ and $Y = g\left(X\right)$, where
+
+$$g(x) = \begin{cases}7 & x\le \frac{3}{4} \\ 5 & x > \frac{3}{4}.\end{cases}$$
+
+::: {.note .fragment}
+$Y$ is discrete with only 2 possible values whereas $X$ is continuous.
+:::
+
+::: {.fragment .note}
+We can compute the full distribution of $Y$ by computing the probability massess associated with the 2 values.
+:::
+
+:::::
+::::: {.column}
+
+:::: {.nobullet .incremental}
++  $p_Y(7) = P(X\le 3/4)=3/4$
++  $p_Y(5) = P(X> 3/4) = 1/4$
+:::
+
+:::: {.fragment}
+$$p_Y(y) = \begin{cases} \frac{1}{4} & y = 5\\
+\frac{3}{4} & y = 7 \\
+0 & \text{otherwise}\end{cases}$$
+::::
+
+:::::
+::::::
+
+
+## Example: Continuous to continuous
+
+::::::: {.columns}
+:::::: {.column}
+
+(Example 4.38 from Devore \& Berk)
+
+Let $X\sim \text{Exp}\left(1/2\right)$ and $Y=g\left(X\right)=60X$. Determine the distribution of $Y$.
+
+::: {.note .fragment}
+Both $Y$ and $X$ are continuous.
+:::
+
+::: {.note .fragment}
+$f_Y(g(x)) \neq f_X(x)$
+:::
+
+::: {.note .fragment .accent-five}
+Equivalent events share the same probability not density.
+:::
+::::::
+:::::: {.column}
+
+:::: {.nobullet .fragment}
++  $F_Y(y)=P(Y\le y)=P(60 X \le y)$
++  $\phantom{F_Y(y)}=P\left(X\le y / 60\right)$
+::::
+:::: {.nobullet .fragment}
++  When $y>0$,
++  $F_Y(y)=\int_{-\infty}^{y/60}f_X(u)du$
++  $\phantom{F_Y(y)}=\int_0^{y/60}\frac{1}{2}e^{-u/2}du$
++  $\phantom{F_Y(y)}=1-e^{-y/120}$
+::::
+
+:::: {.fragment}
+$$F_Y(y)=\begin{cases}
+1-e^{-y/120} & y > 0 \\
+0 & y \le 0
+\end{cases}$$
+::::
+::::::
+:::::::
+
+
+## Example: Continuous to continuous
+
+
+::::::: {.columns}
+:::::: {.column}
+
+$$F_Y(y)=\begin{cases}
+1-e^{-y/120} & y > 0 \\
+0 & y \le 0
+\end{cases}$$
+
+::: {.note .fragment}
+When the $F_Y$ is continuous and differentiable, we can differentiate $F_Y$ to get $f_Y$.
+:::
+
+::: {.nobullet .incremental}
++  $f_Y(y)=\begin{cases}
+\frac{1}{120}e^{-y/120} & y > 0 \\
+0 & y \le 0
+\end{cases}$
+
++  $Y\sim \text{Exp}(1/120)$
+:::
+
+::: {.note .fragment}
+$60X$ multiplies the unit of measurement by 60 thus, the expected rate is reduced by a factor of $60$.
+:::
+::::::
+:::::: {.column}
+
+::: {.note .fragment}
+It is __NOT__ always possible to get a closed-form of a the transformed $F_Y$.
+:::
+
+::: {.note .fragment}
+Under certain conditions, we may derive $f_Y$ directly from $f_X$ based on the Fundamental Theorem of Calculus and the chain rule.
+
+\begin{align*}
+f_Y(y) =& \frac{d}{dy}F_Y(y) \\
+=& \left.\frac{d}{dy}F_X\left(x\right)\right|_{x=g^{-1}\left(y\right)} \\
+=& \left.\frac{dx}{dy}\frac{d}{dx}F_X\left(x\right)\right|_{x=g^{-1}\left(y\right)} \\
+=& \left.\frac{dx}{dy}f_X(x)\right|_{x=g^{-1}\left(y\right)}
+\end{align*}
+:::
+
+::::::
+:::::::
+
+## Differentiable and invertible transformation of continuous random variables {.half-title .center}
+
+:::: {.column width="45%"}
+
+::: {.fragment .note}
+The absolute value is needed for decreasing $g$.
+:::
+
+::: {.fragment .note}
+Where $f_X(x)=0$, $f_Y(y)=0$ and the property of $g$ doesn't matter.
+:::
+::::
+
+:::::: {.full-height .right}
+:::: {.definition}
+
+Let $X$ be a continuous random variable with probability density function $f_X$ and $Y=g\left(X\right)$, where $g:\mathbb{R}\to\mathbb{R}$ is a function that is **differentiable**, and **strictly increasing** or **strictly decreasing** at places for which $f_X(x)>0$. 
+
+Then, $Y$ is also continuous, and its density function $f_Y$ is defined by
+
+$$f_Y(y)=\left|\frac{d}{dy}h\left(y\right)\right|\cdot f_X\left(h\left(y\right)\right),$$
+
+where $X=h(Y)$.
+::::
+::::::
+
+## Example: Exercise 8.7 from Dekking et al.
+
+:::::: {.columns}
+::::: {.column}
+
+Suppose $X$ is a continuous random variable with pdf $f$ for some $\alpha>0$.
+
+$$f(x)=\begin{cases}
+\frac{\alpha}{x^{\alpha+1}} & x\ge 1 \\
+0 & \text{otherwise}\end{cases}$$
+
+What is the distribution of $Y=\log\left(X\right)$?
+
+:::::
+::::: {.column .fragment}
+
+
+```{r}
+x <- seq(0.001, 10, 0.001)
+y <- log(x)
+ggplot() +
+  theme_classic() + 
+  geom_line(aes(x = x, y = y, color = x < 1), show.legend = FALSE) +
+  scale_x_continuous(breaks = c(0, 1, 10)) +
+  scale_color_manual(values = c(1, 8)) +
+  geom_vline(xintercept = 1, linetype = "dotted") +
+  geom_hline(xintercept = 0, linetype = "dotted") +
+  labs(x = "X", y = "Y") +
+  theme(axis.text = element_text(size = 22),
+        axis.title = element_text(size = 22),
+        plot.title = element_text(size = 26, hjust = 0.5),
+        plot.title.position = "plot")
+```
+
+
+::: {.note .fragment}
+$\log(X)$ is strictly increasing when $X\ge 0$.
+:::
+
+::: {.note .fragment}
+$Y\ge 0$ when $X\ge 1$.
+:::
+
+:::::
+::::::
+
+## Example: Exercise 8.7 from Dekking et al.
+
+:::::: {.columns}
+::::: {.column}
+
+```{r}
+x <- seq(0.001, 10, 0.001)
+y <- log(x)
+ggplot() +
+  theme_classic() + 
+  geom_line(aes(x = x, y = y, color = x < 1), show.legend = FALSE) +
+  scale_x_continuous(breaks = c(0, 1, 10)) +
+  scale_color_manual(values = c(1, 8)) +
+  geom_vline(xintercept = 1, linetype = "dotted") +
+  geom_hline(xintercept = 0, linetype = "dotted") +
+  labs(x = "X", y = "Y") +
+  theme(axis.text = element_text(size = 22),
+        axis.title = element_text(size = 22),
+        plot.title = element_text(size = 26, hjust = 0.5),
+        plot.title.position = "plot")
+```
+
+
+:::::
+::::: {.column}
+
+::: {.incremental .nobullet}
++  Let $h(y)=e^y$. Then, $h'(y)=e^y$.
++  When $y\ge0$, $f_Y(y)=\left|e^y\right|\cdot \frac{\alpha}{e^{y\left(\alpha+1\right)}} = \alpha e^{-\alpha y}$.
+:::
+::: {.fragment}
+$$f_Y(y)=\begin{cases}\alpha e^{-\alpha y} & y\ge 0\\
+0 & \text{otherwise}\end{cases}$$
+:::
+::: {.fragment}
+$$\implies Y \sim \text{Exp}\left(\alpha\right)$$
+:::
+
+:::::
+::::::
+
+# Jensen's inequality {.half-title .center}
+
+:::: {.column width="45%"}
+::: {.note}
+It is a useful tool when you want to compare means of two related random variables without computing the distributions.
+:::
+::::
+
+:::::::: {.full-height .right}
+
+
+<br />
+
+::: {.note .fragment}
+Recall ...
+
+$$E\left(rX+s\right)=r E\left(X\right) + s,$$
+
+where $r$ and $s$ are constants.
+
+When the transformation is NOT linear, we cannot directly calculate the expectation.
+:::
+::: {.note .fragment}
+We may want to gauge the relative value of the transformed expectation, $E\left[g\left(X\right)\right]$, compared to the original expectation $E(X)$.
+:::
+::: {.note .fragment}
+For a __convex function__, $g$, you can gauge the value without computing the distributions or the exact expectation.
+:::
+::::::::
+
+## Convex function {.half-title .center}
+
+::::: {.column width="45%"}
+```{r}
+jensen <- tibble(x = seq(-3, 4, 0.01)) %>% mutate(y = x^2)
+pjensen <- ggplot(jensen, aes(x = x, y = y)) +
+  theme_classic() +
+  geom_line() +
+  annotate("segment", x = -2, xend = 3, y = 4, yend = 9, linetype = "dotted", 
+           colour = palette()[5], linewidth = 1) +
+  annotate("segment", x = -2, xend = -2, y = 0, yend = 4, linetype = "dotted", linewidth = 1) +
+  annotate("segment", x = 3, xend = 3, y = 0, yend = 9, linetype = "dotted", linewidth = 1) +
+  annotate("segment", x = 0, xend = 0, y = 0, yend = 6, linetype = "dotted", linewidth = 1) +
+  annotate("point", x = 0, y = 6, shape = 19, size = 7, color = palette()[5]) +
+  annotate("point", x = 0, y = 0, shape = 19, size = 7) +
+  labs(x = "x", y = "g(x)") +
+  theme(axis.text.y = element_blank(),
+        axis.text.x = element_text(size = 22),
+        axis.title = element_text(size = 22),
+        plot.title = element_text(size = 26, hjust = 0.5),
+        plot.title.position = "plot")
+pjensen + 
+  scale_x_continuous(
+    breaks = c(-2, 0, 3), 
+    label = expression("a", paste(lambda,"a", + (1 - lambda), "b"), "b")
+  ) +
+  ggtitle("A convex function")
+```
+
+:::::
+
+:::::: {.full-height .right}
+:::: {.definition}
+A function $g$ is called **convex** if for every $a<b$, the line segment from $(a, g(a))$ to $(b, g(b))$ is on or above the graph of $g$ on the interval $(a, b)$. 
+
+In other words, for $a<b$, and $\lambda \in (0,1)$, 
+$$\lambda g(a) + (1-\lambda)g(b)\quad$$
+$$\quad\ge g\left(\lambda a + \left(1-\lambda\right)b\right)$$
+
+When the line segment is strictly above the graph of $g$, $g$ is **strictly convex** on the interval $(a, b)$.
+::::
+::::::
+
+## Jensen's inequality {.half-title .center}
+
+
+::::: {.column width="45%"}
+````{r}
+pjensen + 
+  annotate("text", x = 0, y = 7, vjust = 0, hjust = 1.2, color = palette()[5],
+           label = "E[g(X)]", size = 6) +
+  annotate("text", x = 0, y = 1, vjust = 0, hjust = -.2, 
+           label = "g(E[X])", size = 6) +
+  scale_x_continuous(breaks = c(-2, 0, 3), label = c("a", "E[X]", "b"))
+````
+:::::
+:::::::: {.full-height .right}
+::: {.definition}
+
+Let $g$ be a convex function on interval $I$, and let $X$ be a random variable taking values from $I$. Then **Jensen's inequality** states that
+
+$$g\left(E\left[X\right]\right) \le E\left[g\left(X\right)\right].$$
+
+:::
+
+::: {.fragment .note}
+When $g$ is strictly convex on interval $I$ and $X$ is a random variable taking values from $I$, $g\left[E\left(X\right)\right] < E\left[g\left(X\right)\right]$ unless $\text{Var}\left(X\right)=0$.
+:::
+::::::::
+
+## Example: My coffee shop's profit 
+
+Recall 
+
+$$R=g\left(D\right)=\begin{cases}2D - 10 & \text{when } 0\le D < 10 \\ 4D - 30 &\text{when } D\ge 10\end{cases}$$
+
+:::::: {.columns}
+::::: {.column}
+
+```{r} 
+coffeeprofit
+```
+
+:::::
+::::: {.column}
+
+::: {.note .fragment}
+$g(x)$ is convex on $x \ge 0$.
+:::
+
+::: {.fragment}
+By Jensen's inequality, we can deduce 
+
+$$E[R]\ge g(E[D]).$$
+:::
+
+::: {.fragment .nobullet}
++  $E[R]\approx-1.992$
++  $g(E[D])=g(4)=-2$
+:::
+
+:::::
+::::::
+
+::: {.note .fragment}
+Thanks to convexity of $g$, I save almost a cent per day...
+:::
+
+## Example: Quick exercise 8.4 from Dekking et al.
+
+::::::: {.columns}
+:::::: {.column}
+
+Let $X$ be a random variable with $\text{Var}(X)>0$. Which of the following
+two quantities larger?
+
+$$E\left[e^{-X}\right]\quad\text{vs.}\quad e^{-E\left[X\right]}$$
+
+:::: {.fragment}
+```{r}
+quick84 <- ggplot() +
+  theme_classic() +
+  geom_function(fun = function(x) exp(-x), xlim = c(-5, 5)) +
+  annotate("text", x = -2, y = exp(4), , size = 10,
+           label = expression(paste("y = ", e^{-x})), parse = TRUE) +
+  labs(x = "x", y = "y") +
+  theme(axis.text = element_blank(),
+        axis.title = element_text(size = 22),
+        plot.title = element_text(size = 26, hjust = 0.5),
+        plot.title.position = "plot")
+quick84
+```
+::::
+
+::::::
+:::::: {.column}
+
+::: {.note .fragment}
+To check convexity of a continuous function, check whether its second derivative is positive.
+:::
+
+::: {.nobullet .incremental}
++  $\frac{d^2}{dx^2}e^{-x} = \frac{d}{dx} -e^{-x} = e^{-x}$
++  $\frac{d^2}{dx^2}e^{-x} > 0$ for all $x\in\mathbb{R}$
++  Thus, $e^{-x}$ is strictly convex.
+:::
+
+::::::
+:::::::
+
+## Example: Quick exercise 8.4 from Dekking et al.
+
+::::::: {.columns}
+:::::: {.column}
+
+Let $X$ be a random variable with [$\text{Var}(X)>0$]{.accent-five}. Which of the following
+two quantities larger?
+
+$$E\left[e^{-X}\right]\quad\text{vs.}\quad e^{-E\left[X\right]}$$
+
+:::: {}
+```{r}
+quick84
+```
+::::
+
+::::::
+:::::: {.column}
+
+::: {.note}
+To check convexity of a continuous function, check whether its second derivative.
+:::
+
+::: {.nobullet}
++  $\frac{d^2}{dx^2}e^{-x} = \frac{d}{dx} -e^{-x} = e^{-x}$
++  $\frac{d^2}{dx^2}e^{-x} > 0$ for all $x\in\mathbb{R}$
++  Thus, [$e^{-x}$ is strictly convex]{.accent-five}.
+:::
+::: {}
+By Jensen's inequality, [$E\left[e^{-X}\right]\quad>\quad e^{-E\left[X\right]}$]{.accent-five}.
+:::
+
+::::::
+:::::::
+
+# Graphical summary of (simulated) data
+
+## Histogram {.half-title .center}
+
+::::: {.column width="45%"}
+
+Histograms are used to visualize distribution of a univariate data.
+
+```{r}
+ggplot(faithful, aes(x = eruptions)) +
+  theme_classic() +
+  geom_histogram(bins = 20) +
+  labs(title = "Histogram of the Old Faithful geyser eruption lengths\nbetween August 1st and August 15th, 1985", 
+       caption = "Source: Hardle, W. (1991). Smoothing Techniques with Implementation in S. New York: Springer.",
+       x = "Length (min)", y = "Count") +
+  theme(axis.text = element_text(size = 22),
+        axis.title = element_text(size = 22),
+        plot.title = element_text(size = 26, hjust = 0),
+        plot.title.position = "panel")
+```
+
+
+:::::
+::::: {.full-height .right}
+
+<br />
+
+Steps:
+
+::: {.fragment}
+1. Divide the range of the data into (equal-length) intervals, or __bins__; the length of each interval is called the __bin width__
+
+2. Setting each bin's height as
+:::
+:::: {.fragment .columns}
+
+::: {.column width="5%"}
+:::
+::: {.column width="80%" .text-center}
+the number of data points that fall the interval
+
+----
+
+the total number of data points $\times$ bin width
+:::
+::::
+:::::
+
+## Histogram {.half-title .center}
+
+::::: {.column width="45%"}
+
+Histograms are used to visualize distribution of a univariate data.
+
+```{r}
+ggplot(faithful, aes(x = eruptions)) +
+  theme_classic() +
+  geom_histogram(bins = 20) +
+  labs(title = "Histogram of the Old Faithful geyser eruption lengths\nbetween August 1st and August 15th, 1985", 
+       caption = "Source: Hardle, W. (1991). Smoothing Techniques with Implementation in S. New York: Springer.",
+       x = "Length (min)", y = "Count") +
+  theme(axis.text = element_text(size = 22),
+        axis.title = element_text(size = 22),
+        plot.title = element_text(size = 26, hjust = 0),
+        plot.title.position = "panel")
+```
+
+
+:::::
+::::: {.full-height .right}
+
+<br />
+
+:::: {.columns}
+
+::: {.column width="5%"}
+:::
+::: {.column width="80%" .text-center}
+the number of data points that fall the interval
+
+----
+
+the total number of data points $\times$ bin width
+:::
+::::
+
+::: {.note}
+The heights reflects the relative number of data points that belong to each interval.
+:::
+:::::
+
+
+## Density histogram {.half-title .center}
+
+::::: {.column width="45%"}
+
+Histograms are used to visualize distribution of a univariate data.
+
+```{r}
+ggplot(faithful, aes(x = eruptions, y = after_stat(density))) +
+  theme_classic() +
+  geom_histogram(bins = 20) +
+  labs(title = "Histogram of the Old Faithful geyser eruption lengths\nbetween August 1st and August 15th, 1985", 
+       caption = "Source: Hardle, W. (1991). Smoothing Techniques with Implementation in S. New York: Springer.",
+       x = "Length (min)", y = "Relative frequency") +
+  theme(axis.text = element_text(size = 22),
+        axis.title = element_text(size = 22),
+        plot.title = element_text(size = 26, hjust = 0),
+        plot.title.position = "panel")
+```
+
+
+:::::
+::::: {.full-height .right}
+
+<br />
+
+:::: {.columns}
+
+::: {.column width="5%"}
+:::
+::: {.column width="80%" .text-center}
+the number of data points that fall the interval
+
+----
+
+the total number of data points $\times$ bin width
+:::
+::::
+
+::: {.note}
+The heights reflects the relative number of data points that belong to each interval.
+:::
+
+::: {.note}
+In a regular histogram, we often display the _counts_ along the y-axis. When we 
+display the relative proportion as computed above, we call the plot a __density histogram__.
+:::
+:::::
+
+
+# R worksheet
+
+## Install `learnr` and run R worksheet {.half-title}
+
+:::: {.column width="45%"}
+1.   Click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main) to install `learnr` on [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+
+2.   Follow [this link](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Frlesson06&urlpath=shiny%2Frlesson06%2F&branch=main) to open the worksheet
+::::
+
+:::: {.full-height .right}
+
+<br />
+<br />
+
+If you seen an error, try:
+
+::: {.note}
+1. Log in to [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2. Find `rlesson06` from _Files_ pane
+3. Click _Run Document_ 
+:::
+
+Other steps you may try:
+
+::: {.note}
+1.  Remove any `.Rmd` and `.R` files on the home directory of [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2.  In RStudio, 
+    i. Click `Tools` > `Global Options`
+    ii. Uncheck _"Restore most recently opened project at startup"_
+3.  Run `install.packages("learnr")` in RStudio after the steps above or click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main)
+:::
+
+::::
+
+
+# Summary
+
+::::: {.columns}
+:::: {.column}
+:::: 
+:::: {.column}
+
++  When you apply a function to a random variable, the transformed variable is also a random variable.
++  The distribution of the transformed random variable can be inferred by deriving the _probabilities_ of events expressed with the transformed random variable.
++  Histograms provide a visual summary of the distribution of observed data points.
+
+::::
+:::::
+
+## Practice questions {.center}
+
+Chapter 8, [Dekking et al.](https://librarysearch.library.utoronto.ca/permalink/01UTORONTO_INST/14bjeso/alma991106910545806196)
+
++   Quick Exercises 8.1, 8.2, 8.3
++   Exercises 8.1, 8.3, 8.4, 8.5, 8.6, 8.8, 8.9, 8.11, 8.12, 8.13, 8.14
+
+If you want further reference on histograms, you can read Section 15.1 and Section 15.2 from [Dekking et al.](https://librarysearch.library.utoronto.ca/permalink/01UTORONTO_INST/14bjeso/alma991106910545806196).
+
++   See a collection of corrections by the author [here](https://www.tudelft.nl/ewi/over-de-faculteit/afdelingen/applied-mathematics/applied-probability/education/mips)

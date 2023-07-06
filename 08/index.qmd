@@ -1,0 +1,1389 @@
+---
+title: "Lecture 8: Covariance and Correlation"
+subtitle: "STA237: Probability, Statistics, and Data Analysis I"
+author: "Michael Jongho Moon"
+institute: "PhD Student, DoSS, University of Toronto"
+date: "June 7, 2023"
+date-format: full
+format:
+  revealjs:
+    width: 1280
+    height: 720
+    theme: [default, ../theme.scss]
+    css: "style.css"
+    chalkboard: true
+    footer: |
+      &copy; 2023. Michael J. Moon. University of Toronto. 
+      
+      Sharing, posting, selling, or using this material
+      outside of your personal use in this course is
+      <strong>NOT</strong> permitted under any circumstances.
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(fontawesome)
+knitr::opts_chunk$set(eval = TRUE, echo = FALSE)
+palette(RColorBrewer::brewer.pal(8, "Accent"))
+# plot(1:5, col = 1:5, cex = 2, pch = 16)
+theme_sizes <- theme(
+    plot.title = element_text(size = 32),
+    plot.subtitle = element_text(size = 24),
+    axis.text = element_text(size = 20),
+    axis.title = element_text(size = 24, margin = margin(1, 1, 1, 1, unit = "lines")),
+    axis.title.y = element_text(angle = 90),
+    legend.text = element_text(size = 20)
+  )
+```
+
+
+# Example: Radius and volume {.half-title}
+
+:::: {.column width="45%"}
+
+Consider a circle with radius $R$. Suppose $R$ is a continuous random variable
+with probability density function $f_R$.
+
+$$f_R(r)=\begin{cases}
+\frac{3}{16}(r-2)^2 & 0\le r \le 4 \\
+0 & \text{otherwise.}
+\end{cases}$$
+
+::::
+
+:::: {.full-height .right}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+crcl <- tibble(theta = seq(0, 2*pi, 0.001)) %>%
+    mutate(xx = cos(theta),
+           yy = sin(theta))
+pcircle <- ggplot(crcl, aes(x = xx, y = yy)) +
+  theme_void() +
+  geom_path() +
+  annotate("segment", x = 0, xend = cos(0.25 * pi),
+           y = 0, yend = sin(0.25 * pi)) +
+  annotate("text", x =.4, y = .4, label = "R", size = 12, hjust = 1, vjust = 0) +
+  annotate("text", x = 0, y = 0, label = "(0,0)",
+           hjust = -0.2, vjust = 1.2, size = 10) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  geom_vline(xintercept = 0, linetype = "dotted") 
+pcircle
+```
+
+::::
+
+## {}
+
+$$f_R(r)=\begin{cases}
+\frac{3}{16}(r-2)^2 & 0\le r \le 4 \\
+0 & \text{otherwise.}
+\end{cases}$$
+
+Let $A$ be the area. What is the expected value of $A$?
+
+:::: {.nobullet .incremental}
+
++  $E(A) = E\left(\pi R^2\right)$
++  $\phantom{E(A)}=\int_{-\infty}^\infty \pi r^2 \cdot f_R \left(r\right) dr$
++  $\phantom{E(A)}=\pi \int_0^4 r^2\cdot \frac{3}{16}\left(r-2\right)^2 dr$
++  $\phantom{E(A)}=\left(\frac{3\pi}{16}\right) \cdot \int_0^4 r^4 - 4r^3 + 4 r^2dr$
++  $\phantom{E(A)}=\left(\frac{3\pi}{16}\right) \cdot \left[r^5/5 - r^4 + 4r^3/3\right]_{r=0}^4$
++  $\phantom{E(A)=}\vdots$
++  $\phantom{E(A)}=\frac{32\pi}{5}$
+
+::::
+
+## {}
+
+$$f_R(r)=\begin{cases}
+\frac{3}{16}(r-2)^2 & 0\le r \le 4 \\
+0 & \text{otherwise.}
+\end{cases}$$
+
+:::::::: {.columns}
+::::::: {.column width="30%"}
+
+```{r}
+knitr::include_graphics("img/cylinder.png")
+```
+
+:::::::
+::::::: {.column width="70%"}
+
+Now suppose we are interested in the volume of the cylinder with height $H$
+where $H\sim U(0, 10)$ independent of $R$.
+
+What is the expected value of the volume, $V$, of the cylinder?
+
+::: {.fragment .text-center}
+
+$$E\left(V\right)=E\left(A H\right)= E\left[g\left(A,H\right)\right],$$
+
+where $g\left(x,y\right)=x\cdot y$.
+:::
+
+:::: {.fragment .note}
+$g:\mathbb{R}^2\to \mathbb{R}$
+::::
+
+:::::::
+::::::::
+
+## Change-of-variable for 2D expectation {.half-title .center}
+
+:::::::: {.columns}
+::::::: {.column width="20%"}
+:::::::
+::::::: {.column width="80%"}
+::: {.definition}
+
+Let $X$ and $Y$ be random variables, and let $g:\mathbb{R}^2\to\mathbb{R}$ be a function. If $X$ and $Y$ are discrete random variables with values $a_1$, $a_2$, ... and $b_1$, $b_2$, ..., respectively, and with joint probability mass function $p_{X,Y}$, then
+
+$$E\left[g\left(X,Y\right)\right]=\sum_i\sum_j g\left(a_i,b_j\right)p_{X,Y}\left(a_i,b_j\right).$$
+
+If $X$ and $Y$ are continuous random variables with joint probability density function $f_{X,Y}$, then
+
+$$E\left[g\left(X,Y\right)\right]=\int_{-\infty}^\infty\int_{-\infty}^\infty g\left(x,y\right)f_{X,Y}\left(x,y\right)dxdy.$$
+
+:::
+:::::::
+:::::::
+
+## Example: Radius and volume
+
+$$f_R(r)=\begin{cases}
+\frac{3}{16}(r-2)^2 & 0\le r \le 4 \\
+0 & \text{otherwise.}
+\end{cases}$$
+
+:::::::: {.columns}
+::::::: {.column width="30%"}
+
+```{r}
+knitr::include_graphics("img/cylinder.png")
+```
+
+:::::::
+::::::: {.column width="70%"}
+
+
+::: {.incremental .nobullet}
++  $E\left(V\right) = E\left(A H\right)$
++  $\phantom{E\left(V\right)}=\int_{-\infty}^\infty\int_{-\infty}^\infty a\cdot hf_{A,H}(a,h)\ da dh$
+:::
+:::: {.fragment}
+::: {.note}
+$A$ and $H$ are independent because $A$ is a function of $R$, and 
+$R$ and $H$ are independent. Thus, $A$ and $H$ are independent.
+:::
+::: {.nobullet}
++  $\phantom{E\left(V\right)}=\int_{-\infty}^\infty\int_{-\infty}^\infty a\cdot h f_{A}(a)f_H(h)\ da dh$
+:::
+::::
+
+::: {.nobullet .incremental}
++  $\phantom{E\left(V\right)}=\int_{-\infty}^\infty a f_A(a)\ da \int_{-\infty}^\infty h f_H(h)\ dh$
++  $\phantom{E\left(V\right)}=E[A]E[H]=\frac{32\pi}{5}\cdot 5 = 32\pi$
+:::
+:::::::
+::::::::
+
+## Example: Exercise 10.3 from Dekking et al.
+
+:::::::: {.colmns}
+::::::: {.column width="40%"}
+
+Let $U$ and $V$ be two random variables with joint probability distribution
+defined by the following probability mass function.
+
+```{r}
+jpmf <- rbind(
+  c("1/4", "0", "1/4", "1/2"),
+  c("0", "1/2", "0", "1/2"),
+  c("1/4", "1/2", "1/4", "1")
+  )
+rownames(jpmf) <- c("0", "1", "\\(p_U(u)\\)")
+colnames(jpmf) <- c("0", "1", "2", "\\(p_V(v)\\)")
+knitr::kable(jpmf, escape = FALSE,
+             table.attr = "style='width: 80%; overflow-x: hidden;'") |>
+  kableExtra::kable_paper() |>
+  kableExtra::pack_rows("v", 1, 2) |>
+  kableExtra::pack_rows("", 3, 3) |>
+  kableExtra::add_header_above(c(" " = 1, "u" = 3, " " = 1))
+```
+
+:::::::
+::::::: {.column width="55%"}
+
+Compute $E(U+V)$.
+
+::::: {.fragment .nobullet}
++  $E\left(U+V\right)$
++  $= \sum_{u\in\{0,1,2\}}\sum_{v\in\{0,1\}}\left(u + v\right) \cdot p_{U,V}(u,v)$
++  $= (1 + 1)\cdot \frac{1}{2} + (2+0)\cdot\frac{1}{4}$
++  $= \frac{3}{2}$
+:::::
+
+:::: {.fragment}
+How about $E(U)+E(V)$?
+
+::: {.incremental .nobullet}
++  $E(U)=\sum_{u=0}^2 u\cdot p_U(u) = \frac{1}{2}+2\cdot\frac{1}{4}=1$
++  $E(V)=\sum_{v=0}^1 v\cdot p_V(v) = \frac{1}{2}$\
++  $E(U)+E(V)= \frac{3}{2}$
+:::
+
+::::
+
+
+:::::::
+::::::::
+
+## Example: Exercise 10.3 from Dekking et al.
+
+We have $E[U + V]=E[U]+E[V]$.
+
+
+:::: {.incremental .nobullet}
++  $E[U+V]=\sum_u \sum_v (u + v) p_{U,V}(u,v)$
++  $\phantom{E[U+V]}=\sum_u \sum_v u\cdot p_{U,V}(u,v) + \sum_u\sum_v\cdot vp_{U,V}$
++  $\phantom{E[U+V]}=\sum_u u \cdot \color{forestgreen}{\sum_v p_{U,V}(u,v)} + \sum_v v \cdot \color{DarkOrchid}{\sum_u p_{U,V}(u,v)}$
+::::
+
+:::: {.fragment}
+::: {.note}
+$\color{forestgreen}{\sum_v p_{U,V}(u,v)}$ and $\color{DarkOrchid}{\sum_u p_{U,V}(u,v)}$ are the marginal pmfs of $U$ and $V$ respectively.
+:::
+::: {.nobullet}
++  $\phantom{E[U+V]}=\sum_u u\cdot \color{forestgreen}{p_U(u)} + \sum_v v\cdot \color{DarkOrchid}{p_V(v)}$
+:::
+::::
+::: {.fragment .nobullet}
++  $\phantom{E[U+V]}=E[U] + E[V]$
+:::
+
+:::: {.fragment .note}
+In general, $E[g(U,V)]=g(E(U), E(V))$ when $g$ is a linear function.
+::::
+
+# Linearity of expectations {.half-title .center}
+
+:::::: {.full-height .right}
+::: {.definition}
+For all constants $a$, $b$, and $c$ and random variables $X$ and $Y$, we have
+
+$$E\left(aX+bY+c\right)$$
+$$\quad=aE\left(X\right)+bE\left(Y\right)+c.$$
+:::
+::::::
+
+## Exercise: Linearity of expectations for two continuous random variables
+
+:::::: {.columns}
+::::: {.column width="30%"}
+
+For two continuous random variables with joint probability density function $f$,
+show that 
+
+$$E[X+Y]=E[X]+E[Y].$$
+:::::
+::::: {.column width="5%"}
+:::::
+::::: {.column width="65%"}
+
+::: {.incremental .nobullet}
++  $E\left(X+Y\right)=\int_{-\infty}^\infty\int_{-\infty}^\infty \left(x+y\right)f_{X,Y}\left(x,y\right)dx dy$
++  $=\int_{-\infty}^\infty \int_{-\infty}^\infty x\cdot f_{X,Y}\left(x,y\right)dxdy$ $\quad+ \int_{-\infty}^\infty\int_{-\infty}^\infty y\cdot f_{X,Y}\left(x,y\right)dxdy$
++  $=\int_{-\infty}^\infty x\color{forestgreen}{\left[\int_{-\infty}^\infty f_{X,Y}\left(x,y\right)dy\right]}dx$ $\quad+ \int_{-\infty}^\infty y\color{darkorchid}{\left[\int_{-\infty}^\infty f_{X,Y}\left(x,y\right)dx\right]}dy$
++  $=\int_{-\infty}^\infty x\cdot \color{forestgreen}{f_X\left(x\right)}dx +\int_{-\infty}^\infty y\cdot \color{darkorchid}{f_Y\left(y\right)}dy$
++  $=\int_{-\infty}^\infty x\cdot f_X\left(x\right)dx+\int_{-\infty}^\infty y\cdot f_Y\left(y\right)dy$
++  $=E\left(X\right)+E\left(Y\right)$
+:::
+
+:::::
+::::::
+
+## Exercise: Linearity of expectations for two continuous random variables
+
+:::::: {.columns}
+::::: {.column width="30%"}
+
+For two continuous random variables with joint probability density function $f$,
+show that 
+
+$$E[X+Y]=E[X]+E[Y].$$
+
+::: {.note}
+The change-of-variable for 2D expectation formula and linearity of expectations can be extended to any number of random variables - both discrete and continuous.
+:::
+:::::
+::::: {.column width="5%"}
+:::::
+::::: {.column width="65%"}
+
+::: {.nobullet}
++  $E\left(X+Y\right)=\int_{-\infty}^\infty\int_{-\infty}^\infty \left(x+y\right)f_{X,Y}\left(x,y\right)dx dy$
++  $=\int_{-\infty}^\infty \int_{-\infty}^\infty x\cdot f_{X,Y}\left(x,y\right)dxdy$ $\quad+ \int_{-\infty}^\infty\int_{-\infty}^\infty y\cdot f_{X,Y}\left(x,y\right)dxdy$
++  $=\int_{-\infty}^\infty x\color{forestgreen}{\left[\int_{-\infty}^\infty f_{X,Y}\left(x,y\right)dy\right]}dx$ $\quad+ \int_{-\infty}^\infty y\color{darkorchid}{\left[\int_{-\infty}^\infty f_{X,Y}\left(x,y\right)dx\right]}dy$
++  $=\int_{-\infty}^\infty x\cdot \color{forestgreen}{f_X\left(x\right)}dx +\int_{-\infty}^\infty y\cdot \color{darkorchid}{f_Y\left(y\right)}dy$
++  $=E\left(X\right)+E\left(Y\right)$
+:::
+
+:::::
+::::::
+
+
+
+
+## Example: Exercise 10.3 from Dekking et al.
+
+:::::::: {.colmns}
+::::::: {.column width="40%"}
+
+Let $U$ and $V$ be two random variables with joint probability distribution
+defined by the following probability mass function.
+
+```{r}
+knitr::kable(jpmf, escape = FALSE,
+             table.attr = "style='width: 80%; overflow-x: hidden;'") |>
+  kableExtra::kable_paper() |>
+  kableExtra::pack_rows("v", 1, 2) |>
+  kableExtra::pack_rows("", 3, 3) |>
+  kableExtra::add_header_above(c(" " = 1, "u" = 3, " " = 1))
+```
+
+:::::::
+::::::: {.column width="55%"}
+
+Compute $E(UV)$.
+
+::::: {.fragment .nobullet}
++  $E\left(UV\right)$
++  $= \sum_{u\in\{0,1,2\}}\sum_{v\in\{0,1\}}u\cdot v\cdot p_{U,V}(u,v)=\frac{1}{2}$
+:::::
+
+<br />
+
+:::: {.fragment}
+How about $E(U)E(V)$?
+
+::: {.incremental .nobullet}
++  $E(U)E(V)= \frac{1}{2}$
+:::
+
+::::
+
+:::: {.fragment .note}
+We have $E[g(U,V)]=E[UV]=E(U)E(V)=g(E[U],E[V])$ when $g$ is NOT a linear function. We will discuss the condition for this to hold true.
+::::
+
+:::::::
+::::::::
+
+## Example: A joint probability density function
+
+::::::: {.columns}
+:::::: {.column width="45%"}
+
+Consider random variables $X$ and $Y$ with joint probability density function $f$.
+
+$$f(x,y)=\begin{cases}4x^2y + 2y^5 & x\in[0,1], \\
+& \ y\in [0,1]\\
+0 &\text{otherwise}\end{cases}$$
+
+::::::
+:::::: {.column width="55%"}
+
+Compute $E[XY]$.
+
+::::: {.nobullet .incremental}
++  $E[XY]=\int_0^1\int_0^1 xy\cdot \left(4x^2y+2y^5\right)dxdy$
++  $\phantom{E[XY]}=\int_0^1 \left[x^4y^2 + x^2y^6\right]_{x=0}^1 dy$
++  $\phantom{E[XY]}=\left[\frac{1}{3}y^3 + \frac{1}{7}y^7\right]_{y=0}^1$
++  $\phantom{E[XY]}=\frac{10}{21}$
+:::::
+
+::::::
+:::::::
+
+## Example: A joint probability density function
+
+::::::: {.columns}
+:::::: {.column width="45%"}
+
+Consider random variables $X$ and $Y$ with joint probability density function $f$.
+
+$$f(x,y)=\begin{cases}4x^2y + 2y^5 & x\in[0,1], \\
+& \ y\in [0,1]\\
+0 &\text{otherwise}\end{cases}$$
+
+:::: {.fragment}
+::: {.note}
+$f_X(x)=2x^2+1/3$ when $x\in[0,1]$ and 0 otherwise.
+:::
+::: {.note}
+$f_Y(y)=4y/3+2y^5$ when $y\in[0,1]$ and 0 otherwise.
+:::
+::::
+
+::::::
+:::::: {.column width="55%"}
+
+Compute $E[X]E[Y]$.
+
+::::: {.nobullet .incremental}
++  $E[X]=\int_0^1x\left(2x^2+\frac{1}{3}\right)dx=\frac{1}{2}+\frac{1}{6}=\frac{2}{3}$
++  $E[Y]=\int_0^1 y \left(\frac{4y}{3}+2y^5\right)dy=\frac{4}{9} + \frac{2}{7}=\frac{46}{63}$
++  $E[X]E[Y]=\frac{92}{189}$
+:::::
+
+:::: {.fragment .note}
+We have $E[XY]\neq E(X)E(Y)$.
+::::
+::::::
+:::::::
+
+## {}
+
+
+$$E[X]E[Y]=\int_0^1x\left(2x^2+\frac{1}{3}\right)dx\int_0^1 y \left(\frac{4y}{3}+2y^5\right)dy$$
+$$=\int_0^1\int_0^1 xy \color{forestgreen}{\left(2x^2+\frac{1}{3}\right) \left(\frac{4y}{3}+2y^5\right)}dxdy$$
+
+::::: {.text-center}
+vs.
+:::::
+
+$$E[XY]=\int_0^1\int_0^1 xy\color{forestgreen}{\left(4x^2y+2y^5\right)}dxdy$$
+
+:::: {.note .fragment}
+When random variables $X$ and $Y$ are **dependent**,  
+$E[XY]$ _MAY NOT_ equal $E[X]E[Y]$.
+::::
+
+:::: {.note .fragment}
+When random variables $X$ and $Y$ are **independent**,  
+$E[XY] = E[X]E[Y]$ is true.
+::::
+
+
+## Sum of $X$ and $Y$ when $X$ and $Y$ are not independent 
+
+
+:::::: {.column}
+
+$$E(X+Y)$$
+
+::: {.fragment}
+$$=E(X)+E(Y)$$
+:::
+::::::
+:::::: {.fragment}
+::: {.note}
+We can use the linearity of expectation property.
+:::
+::: {.note}
+The property applies whether or not the random variables are independent.
+:::
+::::::
+
+
+## Sum of $X$ and $Y$ when $X$ and $Y$ are not independent 
+
+::::::: {.columns}
+:::::: {.column}
+
+$$\text{Var}(X+Y)$$
+
+::: {.nobullet .incremental}
++  $=E\left[\left(X+Y\right)^2\right] - \left[E(X+Y)\right]^2$
++  $=E\left(X^2+2XY+Y^2\right)$  
+$\quad-\left[E\left(X\right)+E\left(Y\right)\right]^2$
++  $=E\left(X^2\right) + 2E\left(XY\right) + E\left(Y^2\right)$ $\quad - E(X)^2 - 2E(X)E(Y) - E(Y)^2$
++  $=\color{forestgreen}{E\left(X^2\right) - E(X)^2 + E\left(Y^2\right) - E(Y)^2}$  
+$+ 2\left[\color{darkorchid}{E\left(XY\right) - E(X)E(Y)}\right]$
+:::
+::::::
+:::::: {.column}
+
+$$\text{Var}(X)+\text{Var}(Y)$$
+
+::: {.nobullet .incremental}
++  $=\color{forestgreen}{E\left(X^2\right)-E(X)^2+E\left(Y^2\right)-E(Y)^2}$
+:::
+
+::::: {.fragment}
+::: {.note}
+$E\left(XY\right)$  may not equal $E(X)E(Y)$.
+:::
+::: {.note}
+$\text{Var}(X+Y)$ may not the same as $\text{Var}(X)+\text{Var}(Y)$.
+:::
+::: {.note}
+In other words, $\color{darkorchid}{E\left(XY\right) - E(X)E(Y)}$ may be non-zero.
+:::
+:::::
+
+::::::
+:::::::
+
+# Covariance and correlation {.half-title .center}
+
+::::::: {.full-height .right}
+:::: {.note}
+We use ${E\left(XY\right) - E(X)E(Y)}$ to measure linear relationship
+between $X$ and $Y$.
+::::
+:::::::
+
+## Covariance {.half-title .center}
+
+::::: {.column width="45%"}
+::: {.note .fragment}
+The product of $X-E(X)$ and $Y-E(Y)$ tells us
+whether $X$ and $Y$ agree in their displacement
+from their respective means.
+:::
+:::::
+
+
+::::::: {.full-height .right}
+::: {.definition}
+Let $X$ and $Y$ be two random variables. The **covariance** between $X$ and $Y$ is defined as
+
+$$\text{Cov}\left(X,Y\right)$$
+$$\quad=E\left[\left(X-E\left[X\right]\right)\left(Y-E\left[Y\right]\right)\right].$$
+:::
+:::::::
+
+## {.center}
+
+:::: {.note}
+We use ${E\left(XY\right) - E(X)E(Y)}$ to measure linear relationship
+between $X$ and $Y$.
+::::
+
+:::: {.incremental .nobullet}
++  $E\left[\left(X-E\left[X\right]\right)\left(Y-E\left[Y\right]\right)\right]$
++  $=E\left(XY - XE[Y] - E[X]Y + E[X]E[Y]\right)$
++  $=E\left(XY\right) - E\left(XE[Y]\right) - E\left(E[X]Y\right) + E\left(E[X]E[Y]\right)$
++  $=E[XY]-E[X]E[Y]-E[X]E[Y]+E[X]E[Y]$
++  $=E[XY]-E[X]E[Y]$
+::::
+
+## Covariance {.half-title .center}
+
+
+::::::: {.full-height .right}
+::: {.definition}
+Let $X$ and $Y$ bet two random variables. The **covariance** between $X$ and $Y$ is defined as
+
+$$\text{Cov}\left(X,Y\right)$$
+$$\quad=E\left[\left(X-E\left[X\right]\right)\left(Y-E\left[Y\right]\right)\right]$$
+
+or equivalently,
+
+$$E\left[XY\right]-E\left[X\right]E\left[Y\right].$$
+
+:::
+:::::::
+
+## Visualising covariance
+
+```{r}
+set.seed(1080)
+poscor <- tibble(X = rnorm(100)) %>%
+  mutate(Y = X + rnorm(100))
+negcor <- tibble(X = rnorm(100)) %>%
+  mutate(Y = -X + rnorm(100))
+uncor <- tibble(X = rnorm(100)) %>%
+  mutate(Y = rnorm(100))
+pposcor <- ggplot(poscor, aes(x = X, y = Y)) +
+  theme_classic() +
+  geom_hline(aes(yintercept = 0), linetype = "dotted") +
+  geom_vline(aes(xintercept = 0), linetype = "dotted") +
+  geom_point(size = 5) +
+  scale_x_continuous(breaks = 0, label = "E(X)") +
+  scale_y_continuous(breaks = 0, label = "E(Y)") +
+  theme(
+    axis.ticks = element_blank(),
+    axis.text = element_text(size = 40),
+    axis.title = element_text(size = 40)
+  )
+pnegcor <- ggplot(negcor, aes(x = X, y = Y)) +
+  theme_classic() +
+  geom_hline(aes(yintercept = 0), linetype = "dotted") +
+  geom_vline(aes(xintercept = 0), linetype = "dotted") +
+  geom_point(size = 5) +
+  scale_x_continuous(breaks = 0, label = "E(X)") +
+  scale_y_continuous(breaks = 0, label = "E(Y)") +
+  theme(
+    axis.ticks = element_blank(),
+    axis.text = element_text(size = 40),
+    axis.title = element_text(size = 40)
+  )
+puncor <- ggplot(uncor, aes(x = X, y = Y)) +
+  theme_classic() +
+  geom_hline(aes(yintercept = 0), linetype = "dotted") +
+  geom_vline(aes(xintercept = 0), linetype = "dotted") +
+  geom_point(size = 5) +
+  scale_x_continuous(breaks = 0, label = "E(X)") +
+  scale_y_continuous(breaks = 0, label = "E(Y)") +
+  theme(
+    axis.ticks = element_blank(),
+    axis.text = element_text(size = 40),
+    axis.title = element_text(size = 40)
+  )
+```
+
+:::::: {.columns}
+::::: {.column width="30%"}
+
+**Positively correlated**
+$$\text{Cov}\left(X,Y\right)>0$$
+
+```{r fig.asp=1}
+pposcor
+```
+:::::
+::::: {.column width="5%"}
+:::::
+::::: {.column width="30%"}
+
+**Uncorrelated**
+$$\text{Cov}\left(X,Y\right)=0$$
+
+```{r fig.asp=1}
+puncor
+```
+:::::
+::::: {.column width="5%"}
+:::::
+::::: {.column width="30%"}
+
+**Negatively correlated**
+$$\text{Cov}\left(X,Y\right)<0$$
+
+```{r fig.asp=1}
+pnegcor
+```
+:::::
+::::::
+
+
+## Example: Exercise 10.3 from Dekking et al. {.center}
+
+:::::::: {.colmns}
+::::::: {.column width="40%"}
+
+```{r}
+knitr::kable(jpmf, escape = FALSE,
+             table.attr = "style='width: 80%; overflow-x: hidden;'") |>
+  kableExtra::kable_paper() |>
+  kableExtra::pack_rows("v", 1, 2) |>
+  kableExtra::pack_rows("", 3, 3) |>
+  kableExtra::add_header_above(c(" " = 1, "u" = 3, " " = 1))
+```
+
+
+
+:::::::
+::::::: {.column width="55%"}
+
+::::: {.nobullet}
++  We know $E\left(UV\right)=E(U)E(V)=\frac{1}{2}$
++  $\implies \text{Cov}(U,V)=0$
+:::::
+:::::::
+::::::::
+
+## Example: Radius and volume
+
+
+
+$$f_R(r)=\begin{cases}
+\frac{3}{16}(r-2)^2 & 0\le r \le 4 \\
+0 & \text{otherwise.}
+\end{cases}\quad\quad H\sim U(0,10)$$
+
+
+
+
+Compute $\text{Cov}(V,H)=E(VH)-E(V)E(H)$.
+
+::: {.incremental .nobullet}
++  $E[HV]=E\left[\pi R^2H^2\right]$
++  $\phantom{E[HV]}=\pi E\left[R^2\right]E\left[H^2\right]$
++  $\phantom{E[HV]}=\pi \cdot \int_0^4 r^2 \cdot \frac{3}{16}(r-2)^2\ dr\cdot \int_0^{10} h^2\cdot\frac{1}{10}\ dh$
++  $\phantom{E[HV]}=\pi \cdot \frac{32}{5}\cdot\frac{100}{3}$
++  $\phantom{E[HV]}=\frac{20\cdot32}{3}\pi$
+:::
+
+::: {.fragment}
+$$\text{Cov}(V,H)=\frac{20\cdot32}{3}\pi - 32\pi \cdot 5=\frac{160}{3}\pi$$
+:::
+
+## Properties
+
+:::::::: {.columns}
+::::::: {.column width="30%" .fragment}
+Covariance behaves similar to variance under a linear transformation.
+
+$$\text{Cov}\left(aX+b, cY+d\right)$$
+$$=ac\cdot\text{Cov}\left(X,Y\right)$$
+
+for constants $a$, $b$, and $c$ and random variables $X$ and $Y$.
+:::::::
+::::::: {.column width="5%"}
+:::::::
+::::::: {.column width="30%" .fragment}
+Variance is covariance between two identical random variables, or covariance with itself.
+
+$$\text{Var}\left(X\right)$$
+$$=\text{Cov}\left(X,X\right)$$
+
+
+
+:::::::
+::::::: {.column width="5%"}
+:::::::
+::::::: {.column width="30%" .fragment}
+
+When random variables $X$ and $Y$ are uncorrelated,
+
+$$\text{Cov}\left(X,Y\right)=0$$
+$$=E\left(XY\right)-E\left(X\right)E\left(Y\right)$$
+
+$$\iff$$
+$$E\left(XY\right)=E\left(X\right)E\left(Y\right)$$
+
+:::::::
+::::::::
+
+## Example: Correlation and independence
+
+
+Let $X\sim N\left(0,1\right)$ and $Y=X^2$.
+
+:::::: {.columns}
+::::: {.column}
+
+Are they correlated?
+
+::: {.note}
+For $Y\sim N(\mu, \sigma^2)$, $E[Y]=\mu$ and $\text{Var}(Y)=\sigma^2$.
+:::
+
+::: {.incremental .nobullet}
++  $\text{Cov}\left(X,Y\right)=E\left(XY\right)-E\left(X\right)E\left(Y\right)$
++  $\phantom{\text{Cov}\left(X,Y\right)}=E\left(X^3\right)-E\left(X\right)E\left(X^2\right)$
++  $\phantom{\text{Cov}\left(X,Y\right)}=\color{forestgreen}{E\left(X^3\right)}-0$
+:::
+
+::::: 
+::::: {.column}
+
+
+
+:::::
+::::::
+
+## Evaluating $E\left(X^3\right)$
+
+:::::: {.columns}
+::::: {.column}
+$$E\left(X^3\right)=\int_{-\infty}^\infty x^3 \phi(x)dx$$
+
+::: {.incremental}
++  $\phi$ is symmetric around $0$
++  $x^3$ is an odd function,  
+i.e., $x^3 = - (-x)^3$
++  $X^3$ is symmetric around $0$,  
+i.e., $f_{X^3}(u)=f_{X^3}(-u)$ for all $u\in\mathbb{R}$
+:::
+
+::: {.fragment}
+$$\implies E\left(X^3\right)=0$$
+:::
+
+
+:::::
+::::::
+::::: {.full-height .right}
+
+<br />
+
+```{r}
+#| layout-ncol: 1
+ggplot() +
+  theme_void() +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  geom_vline(xintercept = 0, linetype = "dotted") +
+  geom_vline(xintercept = c(-1, 1), color = "red", linetype = "dotted") +
+  geom_function(fun =  ~ .x^3, xlim = c(-2, 2)) +
+  labs(title = expression(paste("y = ",x^3))) +
+  theme(plot.title = element_text(size = 24, hjust = .5))
+ggplot() +
+  theme_void() +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  geom_vline(xintercept = 0, linetype = "dotted") +
+  geom_vline(xintercept = c(-1, 1), color = "red", linetype = "dotted") +
+  geom_function(fun =  dnorm, xlim = c(-2, 2)) +
+  labs(title = expression(paste("y = ",phi(x)))) +
+  theme(plot.title = element_text(size = 24, hjust = .5))
+```
+
+:::::
+
+
+## Example: Correlation and independence
+
+Let $X\sim N\left(0,1\right)$ and $Y=X^2$.
+
+:::::: {.columns}
+::::: {.column}
+
+Are they correlated?
+
+::: {.note}
+For $Y\sim N(\mu, \sigma^2)$, $E[Y]=\mu$ and $\text{Var}(Y)=\sigma^2$.
+:::
+
+::: {.nobullet}
++  $\text{Cov}\left(X,Y\right)=E\left(XY\right)-E\left(X\right)E\left(Y\right)$
++  $\phantom{\text{Cov}\left(X,Y\right)}=E\left(X^3\right)-E\left(X\right)E\left(X^2\right)$
++  $\phantom{\text{Cov}\left(X,Y\right)}=\color{forestgreen}{E\left(X^3\right)}-0$
++  $\phantom{\text{Cov}\left(X,Y\right)}=\color{forestgreen}{0}$
+:::
+
+::: {.fragment}
+$$\text{Cov}(X,Y)=0$$
+:::
+::::: 
+::::: {.column .fragment}
+
+Are they independent?
+
+```{r}
+set.seed(237)
+tibble(x = rnorm(100)) |> mutate(y = x^2) |>
+  ggplot(aes(x, y)) +
+  theme_void() +
+  geom_point(alpha = 0.5, size = 4) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  geom_vline(xintercept = 0, linetype = "dotted") +
+  geom_function(fun =  ~ .x^2, xlim = c(-2.5, 2.5), linetype = "dotted") +
+  labs(title = "X vs. Y") +
+  theme(plot.title = element_text(size = 24, hjust = .5))
+```
+
+::: {.fragment}
+No. $Y$ is $X^2$.
+:::
+
+:::::
+::::::
+
+## Dependence doesn't imply correlation {.half-title .center}
+
+:::::: {.column width="45%"}
+:::: {.fragment .note}
+Correlation measures the strength of the _linear relationship_ between two random variables. Dependent random variables may have non-linear relationships that translate to zero correlation.
+::::
+::::::
+
+:::: {.full-height .right}
+
+$$F_X(x)F_Y(y)=F_{X,Y}(x,y)$$
+$$\quad\implies \text{Cov}(X,Y)=0$$
+<hr />
+
+$$\text{Cov}(X,Y)=0$$
+$$\quad\;\not\!\!\!\implies F_X(x)F_Y(y)=F_{X,Y}(x,y)$$
+
+::::
+
+## Correlation coefficient {.half-title .center}
+
+::::: {.column width="45%"}
+:::: {.fragment .note}
+The denominator normalizes covariance to a dimensionless (unitless) measurement.
+::::
+:::: {.fragment .note}
+$\rho(X,Y) \in [-1,1]$ regardless of the magnitudes of $X$ and $Y$.
+::::
+:::: {.fragment .note}
+Allows us the compare the strength of correlation based on the magnitude.
+::::
+:::::
+
+::::::: {.full-height .right}
+::: {.definition}
+Let $X$ and $Y$ be two random variables. The **correlation coefficient** $\rho\left(X,Y\right)$ is defined  
+to be $0$ if $\text{Var}\left(X\right)=0$ or $\text{Var}\left(Y\right)=0$, and
+
+$$\rho\left(X,Y\right)=\frac{\text{Cov}\left(X,Y\right)}{\sqrt{\text{Var}\left(X\right)\text{Var}\left(Y\right)}}$$
+
+otherwise.
+
+:::
+:::::::
+
+
+## Example: Exercise 10. 20 from Dekking et al.
+
+Determine $\rho(U, U^2)$ when $U\sim U(0,a)$ for some $a>0$.
+
+:::::::: {.columns}
+::::::: {.column width="60%"}
+
+::::: {.incremental .nobullet}
++  $\text{Var}\left(U\right)=\color{forestgreen}{E\left(U^2\right)}-\left[\color{darkorchid}{E\left(U\right)}\right]^2$
++  $\text{Var}\left(U^2\right)=\color{orange}{E\left(U^4\right)}-\left[\color{forestgreen}{E\left(U^2\right)}\right]^2$
++  $\text{Cov}\left(U, U^2\right)=\color{navy}{E\left(U^3\right)}-\color{darkorchid}{E\left(U\right)}\color{forestgreen}{E\left(U^2\right)}$
+:::::
+
+::: {.fragment .nobullet}
++  $\color{darkorchid}{E\left(U\right)=\frac{a}{2}}$
++  $\color{forestgreen}{E\left(U^2\right)=\int_0^a \frac{u^2}{a}\ du=\frac{a^2}{3}}$
++  $\color{navy}{E\left(U^3\right)=\int_0^a \frac{u^3}{a}\ du=\frac{a^3}{4}}$
++  $\color{orange}{E\left(U^4\right)=\int_0^a \frac{u^4}{a}\ du = \frac{a^4}{5}}$
+:::
+
+
+:::::::
+::::::: {.column width="40%"}
+
+:::: {.fragment}
+\begin{align*}
+& \rho\left(U,U^2\right)\\
+=& \frac{a^3/12}{\sqrt{\left(a^2/12\right)\left(4a^4/45\right)}}\\
+=& \frac{\sqrt{15}}{4}
+\end{align*}
+::::
+
+:::: {.fragment .note}
+$\rho$ is free of $a$. The magnitude $U$ doesn't effect the dimensionless measure.
+::::
+
+:::::::
+::::::::
+
+## Variance of sum of uncorrelated random variables
+
+::::::::: {.columns}
+:::::::: {.column}
+
+Recall for any two random variables $X$ and $Y$,
+
+
+$$\text{Var}(X+Y)$$
+$$=\color{forestgreen}{E\left(X^2\right) - E(X)^2 + E\left(Y^2\right) - E(Y)^2}$$ $$+ 2\left[\color{darkorchid}{E\left(XY\right) - E(X)E(Y)}\right]$$
+
+$$\text{or,}$$
+
+$$\color{forestgreen}{\text{Var}(X)+\text{Var}(Y)} + 2\color{darkorchid}{\text{Cov}(X,Y)}$$
+
+::::::::
+:::::::: {.column}
+
+
+:::: {.nobullet .incremental}
++  When $X$ and $Y$ are _uncorrelated_, 
+$$\text{Var}(X+Y)=\color{forestgreen}{\text{Var}(X)+\text{Var}(Y)}$$
++  You can also show that 
+$$\text{Var}(X-Y)=\color{forestgreen}{\text{Var}(X)+\text{Var}(Y)}$$
+:::
+::: {.fragment .note}
+In plain words, the variability of the sum or difference two uncorrelated random variables is the sum of their variability. Mixing two unrelated and unpredictable variables increases the variability.
+:::
+::: {.fragment .note}
+We can expand the property to $n$ uncorrelated random variables.
+:::
+::::::::
+:::::::::
+
+
+## Variance of sum of uncorrelated random variables {.half-title .center}
+
+:::::: {.full-height .right}
+:::: {.definition}
+For $n$ uncorrelated random variables $X_1$, $X_2$, ..., $X_n$, we have
+
+$$\text{Var}\left(\sum_{i=1}^n X_i\right)=\sum_{i=1}^n\text{Var}\left(X_i\right).$$
+
+::::
+::::::
+
+## Example: Your vlog on probability
+
+::::::: {.columns}
+:::::: {.column width="40%"}
+
+Suppose you start a vlogging channel and start uploading videos
+on _probabilities found in daily life_. 
+
+Let $n$ be the number of visitors on a particular day and 
+$L$ be the number of "likes" you receive from the visitors on the same day.
+
+Suppose $L\sim \text{Bin}(n,\theta)$ for some $\theta\in(0,1)$. 
+What is $E(L)$ and $\text{Var}(L)$ in terms of $n$ and $\theta$?
+
+::::::
+:::::: {.column width="60%"}
+
+:::: {.fragment}
+We could try computing ...
+
+::: {.nobullet}
++  $E[L]=\sum_{x=0}^n x \cdot \binom{n}{x}\theta^x(1-\theta)^{n-x}$
++  $E\left[L^2\right]=\sum_{x=0}^n x^2 \cdot \binom{n}{x}\theta^x(1-\theta)^{n-x}$
++  $\text{Var}(L) = E\left[L^2\right] - E[L]^2$
+:::
+::::
+
+::::::
+:::::::
+
+## Example: Your vlog on probability
+
+::::::: {.columns}
+:::::: {.column width="40%"}
+
+Suppose you start a vlogging channel and start uploading videos
+on _probabilities found in daily life_. 
+
+Let $n$ be the number of visitors on a particular day and 
+$L$ be the number of "likes" you receive from the visitors on the same day.
+
+Suppose $L\sim \text{Bin}(n,\theta)$ for some $\theta\in(0,1)$. 
+What is $E(L)$ and $\text{Var}(L)$ in terms of $n$ and $\theta$?
+
+::::::
+:::::: {.column width="60%"}
+
+Or let $L = \sum_{i=1}^n L_i$ where $L_i\sim\text{Ber}(\theta)$ 
+representing each person's "like" ...
+
+:::: {.fragment}
+::: {.note}
+Based the linearity of expectations, 
+:::
+::: {.nobullet}
++  $E[L]=\sum_{x=0}^n E[L_x] = n\theta$
+:::
+::::
+
+:::: {.fragment}
+::: {.note}
+$\text{Var}(L_i)=\theta(1-\theta)$ for all $i=1,2,...,n$.
+:::
+::: {.note}
+Because independence implies the random variables are uncorrelated,
+:::
+::: {.nobullet}
++  $\text{Var}(L)=\sum_{x=1}^n\text{Var}(L_x)=n\theta(1-\theta)$
+:::
+::::
+
+::::::
+:::::::
+
+## Properties of binomial distribution {.half-title .center}
+
+:::::::: {.full-height .right}
+
+In general,
+
+$$E[X]=n\theta$$
+
+and
+
+$$\text{Var}(X)=n\theta(1-\theta)$$
+
+when $X\sim\text{Binom}(n,\theta)$.
+
+::::::::
+
+## Example: Your vlog on probability
+
+::::::: {.columns}
+:::::: {.column width="50%"}
+
+Now suppose your channel has 10 subscribers and
+they each visit your channel with a chance of $6/7$ 
+on any given day, independently.
+
+Let $S$ be the number of subscribers that visit
+your channel on a day and $L$ be the number of "likes"
+you receive from them. Assume each visitor gives
+a "like" to a video with a probability of $8/9$, independently.
+
+What is the expected number of "likes" you receive
+per day from your subscribers?
+::::::
+:::::: {.column width="50%"}
+
+::::::
+:::::::
+
+## Example: Your vlog on probability
+
+::::::: {.columns}
+:::::: {.column width="50%"}
+
+[Now suppose your channel has 10 subscribers and
+they each visit your channel with a chance of $6/7$ 
+on any given day, independently.]{.black-text}
+
+[Let $S$ be the number of subscribers that visit
+your channel on a day and $L$ be the number of "likes"
+you receive from them. Assume each visitor gives
+a "like" to a video with a probability of $8/9$, independently.]{.light-text}
+
+[What is the expected number of "likes" you receive
+per day from your subscribers?]{.light-text}
+::::::
+:::::: {.column width="50%"}
+
+::: {.nobullet}
++  Each subscriber's visit is a Bernoulli event.
++  We assumed they all have the same likelihood and are independent.
+:::
+
+::: {.fragment}
+$$S\sim\text{Binom}\left(10,\frac{6}{7}\right)$$
+:::
+
+::::::
+:::::::
+
+## Example: Your vlog on probability
+
+::::::: {.columns}
+:::::: {.column width="50%"}
+
+[Now suppose your channel has 10 subscribers and
+they each visit your channel with a chance of $6/7$ 
+on any given day, independently.]{.light-text}
+
+[Let $S$ be the number of subscribers that visit
+your channel on a day and $L$ be the number of "likes"
+you receive from them. Assume each visitor gives
+a "like" to a video with a probability of $8/9$, independently.]{.black-text}
+
+[What is the expected number of "likes" you receive
+per day from your subscribers?]{.light-text}
+::::::
+:::::: {.column width="50%"}
+
+::: {.light-text}
+$$S\sim\text{Binom}\left(10,\frac{6}{7}\right)$$
+:::
+
+::: {.nobullet}
++  Receiving "like"s from your subscribers are also independent and identical Bernoulli events.
++  The number of _trials_ is the number of visitors. Thus, the binomial distribution
+is conditional on the value of $S$.
+:::
+
+::: {.fragment}
+$$(L|S=s)\sim\text{Binom}\left(s,\frac{8}{9}\right)$$
+:::
+
+::::::
+:::::::
+
+## Example: Your vlog on probability
+
+::::::: {.columns}
+:::::: {.column width="50%"}
+
+[Now suppose your channel has 10 subscribers and
+they each visit your channel with a chance of $6/7$ 
+on any given day, independently.]{.light-text}
+
+[Let $S$ be the number of subscribers that visit
+your channel on a day and $L$ be the number of "likes"
+you receive from them. Assume each visitor gives
+a "like" to a video with a probability of $8/9$, independently.]{.light-text}
+
+[What is the expected number of "likes" you receive
+per day from your subscribers?]{.black-text}
+::::::
+:::::: {.column width="50%"}
+
+::: {.light-text}
+$$S\sim\text{Binom}\left(10,\frac{6}{7}\right)$$
+
+$$(L|S=s)\sim\text{Binom}\left(s,\frac{8}{9}\right)$$
+:::
+
+::: {.nobullet .incremental}
++  We are interested in $E[L]$.
++  Note that this is not $E[L|S=s]$, the expected value of $L$ given some value for $S$.
++  $L|S=s$ is a conditional distribution.
+:::
+
+::::::
+:::::::
+
+# Conditional distribution
+
+## Conditional probability mass function {.half-title .center}
+
+:::::: {.full-height .right}
+:::: {.definition}
+Let $X$ and $Y$ be two discrete random variables with joint probability mass function $p$ and marginal probability mass function $p_X$ for $X$. 
+
+Then, for any $x$ such that $p_X(x)>0$, the **conditional probability mass function
+of $Y$ given $X=x$** is
+
+$$p_{Y|X}(y|x)=\frac{p(x,y)}{p_X(x)}.$$
+::::
+::::::
+
+## Conditional probability density function {.half-title .center}
+
+:::::: {.full-height .right}
+:::: {.definition}
+Let $X$ and $Y$ be two continuous random variables with joint probability density function $f$ and marginal probability density function $f_X$ for $X$. 
+
+Then, for any $x$ such that $f_X(x)>0$, the **conditional probability density function
+of $Y$ given $X=x$** is
+
+$$f_{Y|X}(y|x)=\frac{f(x,y)}{f_X(x)}.$$
+::::
+::::::
+
+
+## Example: Your vlog on probability
+
+:::::::::: {.columns}
+::::::::: {.column}
+
+We have
+
+$$p_{L|S}(l|s)=\binom{s}{l}\left(\frac{8}{9}\right)^l\left(\frac{1}{9}\right)^{s-l}$$
+and
+
+$$p_S(s)=\binom{10}{s}\left(\frac{6}{7}\right)^s\left(\frac{1}{7}\right)^{10-s}.$$
+
+
+:::::::::
+::::::::: {.column .fragment}
+
+We can compute 
+
+:::::: {.nobullet}
++  $p_L(l)=\sum_{s=0}^{10}p_{S,L}(s,l)$ 
++  $\phantom{p_L(l)}=\sum_{s=0}^{10}p_{L|S}(l|s)p_S(s)$
+::::::
+
+... and then compute
+
+
+$$E[L]=\sum_{l=0}^{10} l\cdot p_L(l)$$
+
+:::::::::
+::::::::::
+
+
+## Example: Your vlog on probability
+
+Or ...
+
+:::::::::: {.columns}
+::::::::: {.column}
+
+::::: {.nobullet .incremental}
++  Let $S=\sum_{i=1}^{10} S_i$ where $S_i\sim\text{Ber}(6/7)$. 
++  Let $W = \sum_{i=1}^{10} W_i$ where $W_i$ are independent and follow $\text{Ber}(8/9)$. They are also independent of $S_i$.
++  Then we can write $L=\sum_{i=1}^{10}L_i$ where $L_i=S_iWi$.
+:::::
+
+:::::::::
+::::::::: {.column}
+
+:::: {.fragment}
+$$L_i=\begin{cases}
+ 1 & \{S_i=1\}\cap\{W_i=1\} \\
+ 0 & \text{otherwise.}
+\end{cases}$$
+::::
+::: {.fragment}
+$$\implies L_i\sim\text{Ber}\left(\frac{6}{7}\cdot\frac{8}{9}\right)$$
+$$\implies L\sim\text{Binom}\left(10, \frac{16}{21}\right)$$
+$$\implies E[L]=\frac{160}{21}$$
+:::
+:::::::::
+::::::::::
+
+
+# R worksheet
+
+## Install `learnr` and run R worksheet {.half-title}
+
+:::: {.column width="45%"}
+1.   Click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main) to install `learnr` on [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+
+2.   Follow [this link](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Frlesson08&urlpath=shiny%2Frlesson08%2F&branch=main) to open the worksheet
+::::
+
+:::: {.full-height .right}
+
+<br />
+<br />
+
+If you see an error, try:
+
+::: {.note}
+1. Log in to [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2. Find `rlesson08` from _Files_ pane
+3. Click _Run Document_ 
+:::
+
+Other steps you may try:
+
+::: {.note}
+1.  Remove any `.Rmd` and `.R` files on the home directory of [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2.  In RStudio, 
+    i. Click `Tools` > `Global Options`
+    ii. Uncheck _"Restore most recently opened project at startup"_
+3.  Run `install.packages("learnr")` in RStudio after the steps above or click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main)
+:::
+
+::::
+
+
+# Summary
+
+
+:::: {.full-height .right}
+
++  Expectation is a linear operator on random variables.
++  Covariance and correlation are measures of the linear relationship between two random variables.
++  While independence implies uncorrelatedness, Uncorrelated random variables may be dependent.
++  Conditional distributions describe the behaviour of a random variable given a value of another random variable. 
+::::
+
+
+## Practice questions {.center}
+
+Chapter 10, [Dekking et al.](https://librarysearch.library.utoronto.ca/permalink/01UTORONTO_INST/14bjeso/alma991106910545806196)
+
++   Quick Exercises 10.1, 10.2, 10.3, 10.5
++   Show that $X$ and $Y$ are uncorrelated when they are independent (for both continuous and discrete pairs)
++   Show that $E\left(Z^2\right)=1$ when $Z\sim N\left(0,1\right)$
++   All Exercises except 10.20
+
++   See a collection of corrections by the author [here](https://www.tudelft.nl/ewi/over-de-faculteit/afdelingen/applied-mathematics/applied-probability/education/mips)
+
+Section 5.3, [Devore \& Berk](https://librarysearch.library.utoronto.ca/permalink/01UTORONTO_INST/14bjeso/alma991106895484906196)
+
++  Read Example 5.21
++  Exercise 36, 37, 38, 39, 41, 42 (pg. 263)

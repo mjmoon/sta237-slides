@@ -1,0 +1,1407 @@
+---
+title: "Lecture 7: Joint Distribution"
+subtitle: "STA237: Probability, Statistics, and Data Analysis I"
+author: "Michael Jongho Moon"
+institute: "PhD Student, DoSS, University of Toronto"
+date: "June 5, 2023"
+date-format: full
+format:
+  revealjs:
+    width: 1280
+    height: 720
+    theme: [default, ../theme.scss]
+    css: "style.css"
+    chalkboard: true
+    footer: |
+      &copy; 2023. Michael J. Moon. University of Toronto. 
+      
+      Sharing, posting, selling, or using this material
+      outside of your personal use in this course is
+      <strong>NOT</strong> permitted under any circumstances.
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(fontawesome)
+knitr::opts_chunk$set(eval = TRUE)
+palette(RColorBrewer::brewer.pal(8, "Accent"))
+# plot(1:5, col = 1:5, cex = 2, pch = 16)
+theme_sizes <- theme(
+    plot.title = element_text(size = 32),
+    plot.subtitle = element_text(size = 24),
+    axis.text = element_text(size = 20),
+    axis.title = element_text(size = 24, margin = margin(1, 1, 1, 1, unit = "lines")),
+    axis.title.y = element_text(angle = 90),
+    legend.text = element_text(size = 20)
+  )
+```
+
+
+# Example: My coffee shop with muffins {.half-title}
+
+:::: {.column width="45%"}
+::: {.incremental}
++  Recall $E[R] < 0$ which isn't the best business
++  Michael starts selling muffins as well
++  Let $M$ be the number of muffins sold per day
+:::
+::::
+
+
+:::: {.full-height .right .fragment}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+coffee_n_muffin <- tibble(
+  coffee = rep(0:10, 11), 
+  muffin = rep(0:10, each = 11)
+) |>
+  mutate(
+    d_coffee = dpois(coffee, 4),
+    d_muffin_given_cup = dpois(muffin, coffee),
+    d_muffin_and_cup = d_coffee * d_muffin_given_cup
+  )
+p_coffee_n_muffin <- ggplot(coffee_n_muffin, 
+       aes(x = coffee, y = muffin, 
+           size = d_muffin_and_cup, alpha = d_muffin_and_cup)) +
+  theme_void() +
+  scale_size_continuous(range = c(3, 12)) +
+  scale_x_continuous(breaks = c(0, 5, 10)) +
+  scale_y_continuous(breaks = c(0, 5, 10)) +
+  coord_equal() +
+  geom_point(show.legend = FALSE) +
+  labs(
+    x = "Number of coffee cups (D)", y = "Number of muffins (M)",
+    title = "Probabilities associated with\ndaily coffee and muffin sales",
+    subtitle = "Larger and darker points indicate larger probabilities"
+  )+
+  theme_sizes
+p_coffee_n_muffin
+```
+
+::::
+
+## {.center}
+
+:::::::: {.column width="45%"}
+
+[$$P\left(\left\{D=5\right\} \cap \left\{M=5\right\}\right)$$]{.accent-one}
+
+::: {.fragment .note}
+Each point represents a probability associated with a pair of values.
+:::
+
+::: {.fragment .note}
+How about $P\left(\left\{D\le 5\right\} \cap \left\{M\le 5\right\}\right)$?
+:::
+
+::::::::
+:::::::: {.full-height .right}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+p_coffee_n_muffin +
+  geom_point(
+    data = filter(coffee_n_muffin, muffin == 5, coffee == 5),
+    colour = palette()[1], alpha = 1, show.legend = FALSE
+  )
+```
+
+::::::::
+
+## {.center}
+
+:::::::: {.column width="45%"}
+
+[$$P\left(\left\{D\le 5\right\} \cap \left\{M\le 5\right\}\right)$$]{.accent-one}
+
+::: {.note}
+You will add the probabilities represented by all points in the range.
+:::
+
+::: {.note .fragment}
+What if you were only interested in $D\le 5$?
+:::
+
+::::::::
+:::::::: {.full-height .right}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+p_coffee_n_muffin +
+  geom_point(
+    data = filter(coffee_n_muffin, muffin <= 5, coffee <= 5),
+    colour = palette()[1], alpha = 1, show.legend = FALSE
+  )
+```
+
+::::::::
+
+## {.center}
+
+:::::::: {.column width="45%"}
+
+[$$P\left(D\le 5\right)$$]{.accent-one}
+
+::: {.note}
+You will include all possible values of $M$ while restricting $D\le 5$.
+:::
+
+::: {.fragment}
+This is an example of a __joint distribution__ of two discrete random variables.
+
+The two random variables arise from the _same sample space_ and the joint
+distribution describe the likelihoods of all possible pairs of their values.
+:::
+
+::: {.fragment .note}
+We can drop the set notation with random variables.
+
+$$P\left(\left\{D\le 5\right\} \cap \left\{M\le 5\right\}\right)=P\left(D\le 5, M\le5\right)$$ 
+:::
+
+::::::::
+:::::::: {.full-height .right}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+p_coffee_n_muffin +
+  geom_point(
+    data = filter(coffee_n_muffin, coffee <= 5),
+    colour = palette()[1], alpha = 1, show.legend = FALSE
+  )
+```
+
+::::::::
+
+# Joint distribution of discrete random variables
+
+## Joint probability mass function {.half-title .center} 
+
+::::: {.column width="45%"}
+:::: {.note .fragment}
+To emphasize the random variables, we can write $p_{X,Y}(a,b)$.
+::::
+:::: {.note .fragment}
+Note that $X$ and $Y$ are defined on the **same sample space**, $\Omega$.
+::::
+:::::
+
+:::::: {.full-height .right}
+
+::: {.definition}
+
+The **joint probability mass function** $p$ of two discrete random variables $X$ and $Y$ is the function $p:\mathbb{R}^2\to\left[0,1\right]$, defined by
+
+$$p\left(a,b\right) = P\left(X=a, Y=b\right)$$
+$$\quad\text{for} -\infty<a,b<\infty.$$
+
+:::
+
+::::::
+
+
+## Example: Rollice two dice
+
+:::::: {.columns}
+::::: {.column}
+(Dekking et al. Section 9.1)
+
+Let [$S$]{.accent-five} bet the [sum]{.accent-five} of two fair dice rolls
+and [$M$]{.accent-three} be the [maximum]{.accent-three} of the two.
+
+Compute the following probabilities.
+
+$$P(S=7,M=5)$$
+
+:::::
+::::: {.column .fragment}
+
+```{r}
+#| tbl-cap: |
+#|    Joint probility mass function $p(s, m)$.
+m <- c("1/36", rep(0, 5), "1/36",
+       0, "2/36", rep(0, 4), "2/36",
+       0, "1/36", "2/36", rep(0, 3), "3/36",
+       rep(0, 2) , "2/36", "2/36", rep(0, 2), "4/36",
+       rep(0, 2) , "1/36", "2/36", "2/36", 0, "5/36",
+       rep(0, 3), "2/36", "2/36", "2/36", "6/36",
+       rep(0, 3), "1/36", "2/36", "2/36", "5/36",
+       rep(0, 4), "2/36", "2/36", "4/36",
+       rep(0, 4), "1/36", "2/36", "3/36",
+       rep(0, 5), "2/36", "2/36",
+       rep(0, 5), "1/36", "1/36",
+       paste0(c(1,3,5,7,9,11), "/36"), "")
+smpmf <- matrix(m, ncol = 7, byrow = TRUE)
+rownames(smpmf) <- c(2:12, "\\(p_M(m)\\)")
+colnames(smpmf) <- c(1:6, "\\(p_S(s)\\)")
+
+knitr::kable(smpmf[-12, -7], 
+             booktabs = TRUE, align = c('l', rep('c', 6))) |>
+  kableExtra::kable_styling(font_size = 20) |>
+  kableExtra::pack_rows("s", 1, 11) |>
+  kableExtra::add_header_above(c(" " = 1, "m" = 6))
+```
+
+:::::
+::::::
+
+## Example: Rollice two dice
+
+:::::: {.columns}
+::::: {.column}
+(Dekking et al. Section 9.1)
+
+Let [$S$]{.accent-five} bet the [sum]{.accent-five} of two fair dice rolls
+and [$M$]{.accent-three} be the [maximum]{.accent-three} of the two.
+
+Compute the following probabilities.
+
+$$P(S=7,M=5)$$
+
+$$=\frac{2}{36}=\frac{1}{18}$$
+
+:::::
+::::: {.column}
+
+```{r}
+#| tbl-cap: |
+#|    Joint probility mass function $p(s, m)$.
+knitr::kable(smpmf[-12, -7], 
+             booktabs = TRUE, align = c('l', rep('c', 6))) |>
+  kableExtra::kable_styling(font_size = 20) |>
+  kableExtra::pack_rows("s", 1, 11) |>
+  kableExtra::add_header_above(c(" " = 1, "m" = 6))
+```
+
+:::::
+::::::
+
+## Example: Rollice two dice
+
+:::::: {.columns}
+::::: {.column}
+(Dekking et al. Section 9.1)
+
+Let [$S$]{.accent-five} bet the [sum]{.accent-five} of two fair dice rolls
+and [$M$]{.accent-three} be the [maximum]{.accent-three} of the two.
+
+Compute the following probabilities.
+
+::: {}
+$$P(S=7)$$
+:::
+
+:::::
+::::: {.column}
+
+```{r}
+#| tbl-cap: |
+#|    Joint probility mass function $p(s, m)$.
+knitr::kable(smpmf[-12, -7], 
+             booktabs = TRUE, align = c('l', rep('c', 6))) |>
+  kableExtra::kable_styling(font_size = 20) |>
+  kableExtra::pack_rows("s", 1, 11) |>
+  kableExtra::add_header_above(c(" " = 1, "m" = 6))
+```
+
+:::::
+::::::
+
+## Example: Rollice two dice
+
+:::::: {.columns}
+::::: {.column}
+(Dekking et al. Section 9.1)
+
+Let [$S$]{.accent-five} bet the [sum]{.accent-five} of two fair dice rolls
+and [$M$]{.accent-three} be the [maximum]{.accent-three} of the two.
+
+Compute the following probabilities.
+
+:::: {}
+$$P(S=7)$$
+$$=\frac{2}{36}+\frac{2}{36}+\frac{2}{36}$$
+$$=\frac{1}{6}$$
+:::
+
+:::::
+::::: {.column}
+
+```{r}
+#| tbl-cap: |
+#|    Joint probility mass function $p(s, m)$.
+knitr::kable(smpmf[-12, ],  escape = FALSE, booktabs = TRUE) |>
+  kableExtra::kable_styling(font_size = 20) |>
+  kableExtra::pack_rows("s", 1, 11) |>
+  kableExtra::add_header_above(c(" " = 1, "m" = 6, " " = 1)) |>
+  kableExtra::column_spec(8, italic = TRUE, background = "#696969", color = "white")
+```
+
+:::::
+::::::
+
+## Example: Rollice two dice
+
+:::::: {.columns}
+::::: {.column}
+(Dekking et al. Section 9.1)
+
+Let [$S$]{.accent-five} bet the [sum]{.accent-five} of two fair dice rolls
+and [$M$]{.accent-three} be the [maximum]{.accent-three} of the two.
+
+Compute the following probabilities.
+
+:::: {}
+$$P(M=m)$$
+:::
+
+:::::
+::::: {.column}
+
+```{r}
+#| tbl-cap: |
+#|    Joint probility mass function $p(s, m)$.
+knitr::kable(smpmf, escape = FALSE, booktabs = TRUE,
+             table.attr = "style='overflow-x: hidden;'") |>
+  kableExtra::kable_styling(font_size = 20) |>
+  kableExtra::pack_rows("s", 1, 12) |>
+  kableExtra::add_header_above(c(" " = 1, "m" = 6, " " = 1)) |>
+  kableExtra::row_spec(12, italic = TRUE, background = "#696969", color = "white") |>
+  kableExtra::column_spec(8, italic = TRUE)
+```
+
+:::::
+::::::
+
+## Marginal probability mass function {.half-title .center}
+
+::::: {.column width="45%"}
+:::: {.note .fragment}
+
+The relationship shows how we extract distributions of
+a subset of random variables that belong a larger set.
+
+::::
+:::: {.note .fragment}
+
+**Marginal distribution** is a distribution of
+a subset of random variables that belong to a larger set.
+
+::::
+:::::
+
+:::::::: {.full-height .right}
+
+::: {.definition}
+
+Let $X$ and $Y$ be two discrete random variables, with joint probability mass function $p_{X,Y}$. Then, the **marginal** probability mass function $p_X$ of $X$ can be computed as
+
+$$p_X(x)=\sum_{y}p_{X,Y}\left(x,y\right),\quad\text{and}$$
+
+the **marignal** probability mass function $p_Y$ of $Y$ can be computed as
+
+$$p_Y(y)=\sum_{x}p_{X,Y}\left(x,y\right).$$
+:::
+
+::::::::
+
+## Example: Quick exercise 9.2 from Dekking et al.
+
+::::::::: {.columns}
+:::::::: {.column}
+
+Consider random variables $X$ and $Y$ with the joint probability mass function
+shown on the right for some $\varepsilon > 0$.
+
+
+
+::::::::
+:::::::: {.column}
+
+
+```{r}
+#| tbl-cap: |
+#|    Joint probility mass function, 
+#|    $p(a, b)$.
+qex92 <- matrix(
+  c("\\(1/4-\\varepsilon\\)", "\\(1/4+\\varepsilon\\)", "...",
+    "\\(1/4+\\varepsilon\\)", "\\(1/4-\\varepsilon\\)", "...",
+    "...", "...", " "),
+  ncol = 3
+)
+colnames(qex92) <- c("0", "1", "\\(p_X(a)\\)")
+rownames(qex92) <- c("0", "1", "\\(p_Y(b)\\)")
+knitr::kable(qex92, escape = FALSE, booktabs = TRUE,
+             align = c('l', 'c', 'c', 'r'),
+             table.attr = "style='width: 80%; overflow-x: hidden;'") |>
+  kableExtra::kable_styling(font_size = 20) |>
+  kableExtra::pack_rows("a", 1, 2) |>
+  kableExtra::add_header_above(c(" " = 1, "b" = 2, " " = 1))
+```
+
+::::::::
+:::::::::
+
+## Example: Quick exercise 9.2 from Dekking et al.
+
+::::::::: {.columns}
+:::::::: {.column}
+
+Consider random variables $X$ and $Y$ with the joint probability mass function
+shown on the right for some $\varepsilon > 0$.
+
+::: {.nobullet}
++  The marginal probability masses are $1/2$ for all possible values.
+:::
+:::: {.nobullet .fragment}
++  Can we retract the value of $\varepsilon$?
+
+::: {.fragment .note}
+No. Combining the marginal distributions does NOT provide the full information
+about the joint distribution.
+:::
+::::
+
+::::::::
+:::::::: {.column}
+
+
+```{r}
+#| tbl-cap: |
+#|    Joint probility mass function, 
+#|    $p(a, b)$.
+qex92 <- matrix(
+  c("\\(1/4-\\varepsilon\\)", "\\(1/4+\\varepsilon\\)", "\\(1/2\\)",
+    "\\(1/4+\\varepsilon\\)", "\\(1/4-\\varepsilon\\)", "\\(1/2\\)",
+    "\\(1/2\\)", "\\(1/2\\)", " "),
+  ncol = 3
+)
+colnames(qex92) <- c("0", "1", "\\(p_X(a)\\)")
+rownames(qex92) <- c("0", "1", "\\(p_Y(b)\\)")
+knitr::kable(qex92, escape = FALSE, booktabs = TRUE,
+             align = c('l', 'c', 'c', 'r'),
+             table.attr = "style='width: 80%; overflow-x: hidden;'") |>
+  kableExtra::kable_styling(font_size = 20) |>
+  kableExtra::pack_rows("a", 1, 2) |>
+  kableExtra::add_header_above(c(" " = 1, "b" = 2, " " = 1)) |>
+  kableExtra::row_spec(3, italic = TRUE, background = "#696969", color = "white") |>
+  kableExtra::column_spec(4, italic = TRUE, background = "#696969", color = "white")
+```
+
+::::::::
+:::::::::
+
+
+# Joint cumulative distribution function {.half-title .center}
+
+::::::: {.full-height .right}
+
+::: {.definition}
+
+The **joint cumulative distribution function** $F$ of two random variables $X$ and $Y$ is the function $F:\mathbb{R}^2\to[0,1]$ defined by
+
+$$F\left(a,b\right)=P\left(X\le a, Y \le b\right)$$
+$$\quad\text{for }-\infty<a,b<\infty.$$
+
+:::
+:::::::
+
+## Example: Rolling two dice
+
+:::::: {.columns}
+::::: {.column}
+(Dekking et al. Section 9.1)
+
+Let [$S$]{.accent-five} bet the [sum]{.accent-five} of two fair dice rolls
+and [$M$]{.accent-three} be the [maximum]{.accent-three} of the two.
+
+
+
+:::: {}
+$$F_{S,M}(s,m)$$
+:::
+
+:::::
+::::: {.column}
+
+```{r}
+#| tbl-cap: |
+#|    Joint probility mass function $p(s, m)$.
+knitr::kable(smpmf[-12,-7], 
+             booktabs = TRUE, align = c('l', rep('c', 6))) |>
+  kableExtra::kable_styling(font_size = 20) |>
+  kableExtra::pack_rows("s", 1, 11) |>
+  kableExtra::add_header_above(c(" " = 1, "m" = 6))
+```
+
+:::::
+::::::
+
+## Example: Rolling two dice
+
+:::::: {.columns}
+::::: {.column}
+
+:::: {}
+$$p_{S,M}(s,m)$$
+:::
+
+```{r}
+knitr::kable(smpmf[-12,-7], 
+             booktabs = TRUE, align = c('l', rep('c', 6))) |>
+  kableExtra::kable_styling(font_size = 20) |>
+  kableExtra::pack_rows("s", 1, 11) |>
+  kableExtra::add_header_above(c(" " = 1, "m" = 6))
+```
+
+:::::
+::::: {.column}
+
+:::: {}
+$$F_{S,M}(s,m)$$
+:::
+
+```{r}
+smcdf <- smpmf
+colnames(smcdf)[7] = "\\(F_S(s)\\)"
+rownames(smcdf)[12] = "\\(F_M(m)\\)"
+smcdf[ , ] <- "..."
+smcdf[1, ] <- "1/36"
+smcdf[, 1] <- "1/36"
+smcdf[2, -1] <- "3/36"
+knitr::kable(smcdf[-12, -7], escape = FALSE,
+             booktabs = TRUE) |>
+  kableExtra::kable_styling(font_size = 20) |>
+  kableExtra::pack_rows("s", 1, 11) |>
+  kableExtra::add_header_above(c(" " = 1, "m" = 6))
+```
+
+
+:::::
+::::::
+
+## {}
+
+:::::: {.columns}
+::::: {.column}
+
+:::: {}
+[$$\sum_{s=2}^6\sum_{m=1}^4p_{S,M}(s,m)$$]{.accent-five}
+:::
+:::::
+::::: {.column}
+
+:::: {}
+[$$F_{S,M}(6,4)=\frac{13}{36}$$]{.accent-five}
+:::
+:::::
+::::::
+
+
+:::::: {.columns}
+::::: {.column}
+
+```{r}
+smpmf[-12,-7] |>
+  as.data.frame() |>
+  mutate(across(1:4, function(x) 
+    kableExtra::cell_spec(
+      x, 
+      color = ifelse(c(rep(T, 5), rep(F, 6)), "white", "rgb(105, 105, 105)"),
+      background = ifelse(c(rep(T, 5), rep(F, 6)), palette()[5], "none")
+      )
+    )) |>
+  knitr::kable(booktabs = TRUE, escape = FALSE) |>
+  kableExtra::kable_styling(font_size = 20) |>
+  kableExtra::pack_rows("s", 1, 11) |>
+  kableExtra::add_header_above(c(" " = 1, "m" = 6))
+```
+
+:::::
+::::: {.column}
+
+
+```{r}
+smcdf[5, 4] <- "13/36"
+smcdf[-12,-7] |>
+  as.data.frame() |>
+  mutate(across(4, function(x) 
+    kableExtra::cell_spec(
+      x, 
+      color = ifelse(c(rep(F, 4), T, rep(F, 6)), "white", "rgb(105, 105, 105)"),
+      background = ifelse(c(rep(F, 4), T, rep(F, 6)), palette()[5], "none")
+      )
+    )) |>
+knitr::kable(escape = FALSE, booktabs = TRUE) |>
+  kableExtra::kable_styling(font_size = 20) |>
+  kableExtra::pack_rows("s", 1, 11) |>
+  kableExtra::add_header_above(c(" " = 1, "m" = 6))
+```
+
+
+:::::
+::::::
+
+# Joint distribution of continuous random variables
+
+## Joint cumulative distribution function {.half-title .center}
+
+:::::: {.column width="45%"}
+:::: {.note}
+Similar to the case of a single random variable, joint cumulative distribution functions can describe pairs of [_discrete_]{.accent-five} random variables and pairs of [_continuous_]{.accent-five} random variables
+::::
+::::::
+
+::::::: {.full-height .right}
+
+::: {.definition}
+
+The **joint cumulative distribution function** $F$ of two random variables $X$ and $Y$ is the function $F:\mathbb{R}^2\to[0,1]$ defined by
+
+$$F\left(a,b\right)=P\left(X\le a, Y \le b\right)$$
+$$\quad\text{for }-\infty<a,b<\infty.$$
+
+:::
+:::::::
+
+
+## Example: A bus ride
+
+:::::::: {.columns}
+::::::: {.column}
+
+From an airport, you can either take a bus or a taxi to get to your hotel. The takes $B$ minutes to your hotel where $B$ follows a distribution defined the cumulative distribution function $F_B$. 
+
+$$F_B(t)=\begin{cases}1-\frac{15^2}{t^2} & t\ge 15 \\ 0 & t < 15\end{cases}$$
+
+The time until the next bus is $N\sim U(0,7)$. You decide to take the bus if it arrives within the next 5 minutes. Otherwise, you will take a taxi which takes 20 minutes. Let $T$ be the travel time to your hotel.
+
+:::::::
+::::::: {.column}
+
+What is $F_{T,N}(20,5)$?
+
+:::: {.nobullet .fragment}
++  $F_{T,N}(20,5)=P(T\le 20, N\le 5)$
+::::
+:::: {.fragment}
+::: {.note}
+Recall the multiplication rule for conditional probabilities.
+:::
+::: {.nobullet}
++  $\phantom{F_{T,N}}=P(T\le20|N\le 5)P(N\le5)$
+:::
+::::
+:::: {.nobullet .incremental}
++  $\phantom{F_{T,N}}=P(B\le20)P(N\le5)$
++  $\phantom{F_{T,N}}=\left(1-\frac{15^2}{20^2}\right)\frac{5}{7}$
+::::
+:::::::
+::::::::
+
+## Joint probability density function {.half-title}
+
+:::::::: {.columns}
+:::: {.column width="45%"}
+
+::: {.nobullet}
++  Recall, we compute its integral which is the area under the function to compute a probability.
+:::
+
+::::
+:::: {.column width="55%"}
+
+```{r}
+#| fig-asp: 0.3
+x <- seq(-3, -1, 0.01)
+y <- dnorm(x)
+ggplot(tibble(x = x, y = y), aes(x = x, y = y)) +
+  theme_void() +
+  geom_function(fun = dnorm, xlim = c(-3, 3)) +
+  geom_area(fill = "lightgrey")
+```
+
+::::
+::::::::
+
+## Joint probability density function {.half-title}
+
+:::::::: {.columns}
+:::: {.column width="45%"}
+
+::: {.nobullet}
++  Recall, we compute its integral which is the area under the function to compute a probability.
++  For joint distributions with two variables, we want a density function whose integral, or the volume under the surface, represents a probability.
+:::
+
+::::
+::::::::
+
+:::: {.full-height .right}
+
+```{r}
+#| fig-asp: 1
+theme.novpadding <- list(
+  layout.heights = list(
+    top.padding = 0, 
+    main.key.padding = 0, 
+    key.axis.padding = 0,
+    axis.xlab.padding = 0,
+    xlab.key.padding = 0,
+    key.sub.padding = 0,
+    bottom.padding = 0
+  ),
+  layout.widths = list(
+    left.padding = 0,
+    key.ylab.padding = 0,
+    ylab.axis.padding = 0,
+    axis.key.padding = 0,
+    right.padding = 0
+  ),
+  axis.line = list(col = "transparent")
+)
+mvdnorm <- function(x, y) {
+  exp(-0.5 * (x^2 + y^2))
+}
+x <- seq(-3, 3, 0.1)
+y <- seq(-3, 3, 0.1)
+surf <- expand.grid(x = x, y = y) |>
+  mutate(f = mvdnorm(x, y))
+lattice::wireframe(
+  f ~ x * y, surf,
+  aspect = c(1, 0.5),
+  par.settings = theme.novpadding
+)
+```
+
+::::
+
+## Joint probability density function {.half-title}
+
+::::: {.columns}
+:::: {.column width="20%"}
+::::
+:::: {.column width="80%"}
+::: {.definition}
+Random variables $X$ and $Y$ have a **joint continuous distribution** if for some function $f:\mathbb{R}^2\to\mathbb{R}$ and for all real numbers $a_1$, $a_2$, $b_1$, and $b_2$ with $a_1\le b_1$ and $a_2\le b_2$,
+
+$$P\left(a_1 \le X\le b_1, a_1\le Y\le b_2\right)=\int_{a_2}^{b_2}\int_{a_1}^{b_1} f\left(x,y\right) dx dy.$$
+
+The function $f$ has to satisfy
+
+i. $f\left(x,y\right)\ge 0$ for all $x\in\mathbb{R}$ and $y\in\mathbb{R}$; and
+ii. $\int_{-\infty}^\infty\int_{-\infty}^\infty f\left(x,y\right) dxdy = 1$.
+
+We call $f$ the **joint probability density function** of $X$ and $Y$.
+
+:::
+::::
+:::::
+
+## Example: A joint probability density function
+
+```{r} 
+ex278 <- expand.grid(
+  x = seq(0, 1, 0.005),
+  y = seq(0, 1, 0.005)
+) |>
+  mutate(f = if_else(x + y <= 1, 120 * x^3 * y, 0)) |>
+  filter(f > 0)
+jpdf278 <- ggplot(ex278, aes(x = x, y = y, colour = f)) +
+  theme_classic() +
+  theme_sizes +
+  geom_point() +
+  scale_colour_gradient(
+    low = "white", high = "grey10", name = "Density",
+    breaks = c(0, 15), limits = c(0, 15),
+    guide = guide_colorbar(title.position = "top",
+                           title.theme = element_text(size = 20))
+  ) +
+  scale_x_continuous(breaks = c(0, 1)) +
+  scale_y_continuous(breaks = c(0, 1)) +
+  labs(title = "Joint probability density function\nof X and Y") +
+  theme(legend.position = "bottom",
+        legend.key.width = unit(80, "pt"))
+```
+
+::::: {.columns}
+:::: {.column}
+
+Suppose $X$ and $Y$ have a joint continuous distribution with joint density
+
+$$f_{X,Y}\left(x,y\right)=\begin{cases}120 x^3 y & x\ge 0, y\ge 0, \\
+& \quad x+y\le1 \\ 
+0 &\text{otherwise.}\end{cases}$$
+
+:::: {.note .fragment}
+$f_{X,Y}(x,y)\ge 0$ for all $(x,y)\in\mathbb{R}^2$
+::::
+
+:::: {.note .fragment}
+$\int_{-\infty}^\infty\int_{-\infty}^\infty f_{X,Y}(x,y)dxdy =1$
+::::
+
+:::: {.fragment .nobullet}
++ Compute $F_{X,Y}(1/2, 1/2)$ and $P(X\le 1/2)$.
+::::
+
+::::
+:::: {.column}
+
+```{r}
+#| fig-asp: 1
+jpdf278
+```
+
+::::
+:::::
+
+## {}
+
+$$f_{X,Y}\left(x,y\right)=\begin{cases}120 x^3 y & x\ge 0, y\ge 0, \\
+& \quad x+y\le1 \\ 
+0 &\text{otherwise.}\end{cases}$$
+
+::::: {.columns}
+:::: {.column width="40%"}
+
+```{r}
+#| fig-asp: 1
+jpdf278 + 
+  geom_point(aes(x = x, y = y, alpha = f/2),
+             data = filter(ex278, x <= 1/2, y <= 1/2),
+             color = palette()[3]) +
+  labs(title = expression(P(X<=1/2,Y<=1/2)), parse = TRUE) +
+  theme(legend.position = "none")
+```
+
+::::
+:::: {.column width="60%"}
+
+$$F_{X,Y}(1/2, 1/2)$$ 
+
+::::: {.nobullet .incremental}
+
++  $=\int_{-\infty}^{1/2}\int_{-\infty}^{1/2} f(x,y) dxdy$
++  $=\int_{0}^{1/2}\int_{0}^{1/2} 120x^3y\ dxdy$
++  $=\int_{0}^{1/2} 30\cdot \left(\frac{1}{2}\right)^4 \cdot y\ dy$
++  $=15\cdot\left(\frac{1}{2}\right)^4\cdot\left(\frac{1}{2}\right)^2$
++  $=\frac{15}{64}$
+:::::
+
+::::
+:::::
+
+## {}
+
+$$f_{X,Y}\left(x,y\right)=\begin{cases}120 x^3 y & x\ge 0, y\ge 0, \\
+& \quad x+y\le1 \\ 
+0 &\text{otherwise.}\end{cases}$$
+
+::::: {.columns}
+:::: {.column width="40%"}
+
+```{r}
+#| fig-asp: 1
+jpdf278 + 
+  geom_point(aes(x = x, y = y, alpha = f/2),
+             data = filter(ex278, x <= 1/2),
+             color = palette()[3]) +
+  labs(title = expression(P(X<=1/2)), parse = TRUE) +
+  theme(legend.position = "none")
+```
+
+::::
+:::: {.column width="60%"}
+
+$$P(X\le 1/2)$$ 
+
+::::: {.fragment}
+:::: {.nobullet}
++  $=\int_{-\infty}^{1/2}\int_{-\infty}^{\infty} f(x,y) \color{forestgreen}{dydx}$
+::::
+:::: {.note}
+The order of the integrals is exchangeable for probability density functions.
+::::
+:::::
+
+::::: {.nobullet .incremental}
++  $=\int_{0}^{1/2}\int_{0}^{1 - x} 120x^3y\ dydx$
++  $=\int_{0}^{1/2} \color{DarkOrchid}{60\cdot x^3\cdot \left(1-x\right)^2}\ dx$
++  $=\cdots=\frac{11}{32}$
+:::::
+
+::::
+:::::
+
+
+## {}
+
+$$f_{X,Y}\left(x,y\right)=\begin{cases}120 x^3 y & x\ge 0, y\ge 0, \\
+& \quad x+y\le1 \\ 
+0 &\text{otherwise.}\end{cases}$$
+
+::::: {.columns}
+:::: {.column width="40%"}
+
+```{r}
+#| fig-asp: 1
+ggplot() +
+  theme_void() +
+  theme_sizes +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  geom_vline(xintercept = c(0, 1), linetype = "dotted") +
+  geom_function(fun = function(x) 60 * x^3 * (1 - x)^2, xlim = c(-0.1, 1.1)) +
+  annotate("text", x = 0.01, y = 1, size = 12, hjust = 0,
+           label = expression(paste("y = ",60, x^3, (1-x)^2)), parse = TRUE) +
+  labs(y = NULL) +
+  theme(axis.text.y = element_blank())
+```
+
+::::
+:::: {.column width="60%"}
+
+$$P(X\le 1/2)=\int_{0}^{1/2} \color{DarkOrchid}{60\cdot x^3\cdot \left(1-x\right)^2}\ dx$$ 
+
+::::: {.fragment}
+:::: {.note}
+$\color{DarkOrchid}{60\cdot x^3\cdot \left(1-x\right)^2}$ for $x\in[0,1]$ is the probability
+density function of $X$.
+::::
+:::::
+
+:::: {.fragment}
+$$f_X(x)=\begin{cases} \color{DarkOrchid}{60\cdot x^3\cdot \left(1-x\right)^2}
+& x \in [0,1] \\
+0 & \text{otherwise}\end{cases}$$
+::::
+
+::::
+:::::
+
+## Marignal probability density function {.half-title .center}
+
+:::::: {.full-height .right}
+::: {.definition}
+
+Let $X$ and $Y$ have a joint continuous distribution, with joint density function $f_{X,Y}$. 
+
+Then, the **marginal probability density function** $f_X$ of $X$ satisfies
+
+$$f_X\left(x\right) = \int_{-\infty}^\infty f_{X,Y}\left(x,y\right) dy$$
+
+for all $x\in\mathbb{R}$ and the **marginal probability density function** $f_Y$ of $Y$ satisfies
+
+$$f_Y\left(y\right)=\int_{-\infty}^\infty f_{X,Y}\left(x,y\right)dx$$
+
+for all $y\in\mathbb{R}$.
+
+:::
+:::::
+
+## Marginal cumulative distribution function {.half-title .center}
+
+::::: {.column width="45%"}
+:::: {.fragment}
+::: {.note}
+$P\left(X\le a\right)=F\left(a,\infty\right)=\lim_{b\to\infty}F\left(a,b\right)$
+:::
+::: {.note}
+$P\left(Y\le b\right)=F\left(\infty, b\right)=\lim_{a\to\infty}F\left(a,b\right)$
+:::
+::::
+:::: {.note .fragment}
+
+**Marginal distribution** is a distribution of
+a subset of random variables that belong to a larger set
+in _both discrete and continuous cases_.
+
+::::
+
+:::::
+
+:::::: {.full-height .right}
+::: {.definition}
+
+Let $F$ be the joint cumulative distribution function of random variables $X$ and $Y$. 
+
+Then, the **marginal cumulative distribution function** of $X$ is given by
+
+$$F_X\left(a\right)=\lim_{b\to\infty}F\left(a,b\right)$$
+
+and the **marginal cumulative distribution function** of $Y$ is given by
+
+$$F_Y\left(b\right)=\lim_{a\to\infty}F\left(a,b\right).$$
+
+:::
+::::::
+
+# Independence of random variables {.half-title .center}
+
+## Independence
+
+Recall for events $A$ and $B$,
+
+::: {.fragment .nobullet} 
++  if $P(A)\cdot P(B) = P(A\cap B)$ then they are independent.
+:::
+
+::: {.fragment .text-center}
+$$P\left(\left\{X\in I_A\right\}\right)\cdot P\left(\left\{Y\in I_B\right\}\right)=P\left(\left\{X\in I_A\right\} \cap \left\{Y\in I_B\right\}\right)$$
+
+where $I_A$ and $I_B$ are intervals such that $A=\{X\in I_A\}$ and $B=\{Y\in I_B\}$.
+:::
+
+:::::: {.fragment}
+For random variables $X$ and $Y$,
+
+::: {.nobullet}
++  if $F_X(x)F_Y(y)=F_{X,Y}(x,y)$ for all possible values of $x$ and $y$ then they are independent.
+:::
+::::::
+
+
+::: {.note .fragment}
+When $X$ and $Y$ are independent, $P\left(\left\{X\in I_A\right\}\right) P\left(\left\{Y\in I_B\right\}\right)=P\left(\left\{X\in I_A\right\} \cap \left\{Y\in I_B\right\}\right)$ is true for ALL $I_A$ and $I_B$. 
+:::
+
+## Independent random variables {.half-title .center}
+
+:::::: {.full-height .right}
+::: {.definition}
+
+The random variables $X$ and $Y$, with joint cumulative distribution function $F$, are **independent** if
+
+$$P\left(X\le x, Y\le y\right)=P\left(X\le x\right)\cdot P\left(Y\le y\right),$$
+
+that is,
+
+$$F\left(x,y\right)=F_X\left(x\right)\cdot F_Y\left(y\right)$$
+
+for all possible values $x$ and $y$. Random variables that are not independent are called **dependent**.
+
+:::
+::::::
+
+## Independent disrete random variables {.half-title .center}
+
+:::: {.column width="45%"}
+::: {.note}
+$P\left(X\le x, Y\le y\right) = P\left(X\le x\right)P\left(Y\le y\right)$ for all possible values of $x$ and $y$ implies $P(X=x, Y=y)= P(X=x)P(Y=y)$ for all possible values of $x$ and $y$.
+:::
+::::
+
+:::::: {.full-height .right}
+::: {.definition .fragment}
+The discrete random variables $X$ and $Y$, with joint probability mass function $p$, are **independent** if $p(x,y)=p_X(x)p_Y(y)$ for all possible values of $x$ and $y$.
+:::
+::::::
+
+## Example: Rolling two dice {.half-title}
+
+::::: {.column width="45%"}
+
+Are $S$ and $M$ independent?
+
+:::: {.incremental .nobullet}
++  $p_S(6)p_M(4)=\frac{35}{{36^2}}\neq \frac{2}{36}=p_{S,M}(6,4)$
++  $S$ and $M$ are dependent.
+::::
+
+:::::
+::::: {.full-height .right}
+
+:::: {}
+$$p_{S,M}(s,m)$$
+:::
+
+```{r}
+smpmf |>
+  as.data.frame() |>
+  mutate(
+    `4` = kableExtra::cell_spec(
+      `4`, 
+      color = ifelse(c(rep(F, 4), T, rep(F, 6), T), "white", "rgb(105, 105, 105)"),
+      background = ifelse(c(rep(F, 4), T, rep(F, 6), T), palette()[5], "none")
+      ), 
+    `\\(p_S(s)\\)` = kableExtra::cell_spec(
+      `\\(p_S(s)\\)`, 
+      color = ifelse(c(rep(F, 4), T, rep(F, 6), T), "white", "rgb(105, 105, 105)"),
+      background = ifelse(c(rep(F, 4), T, rep(F, 7)), palette()[5], "none")
+      )) |>
+  knitr::kable(booktabs = TRUE, escape = FALSE,
+               table.attr = "style='overflow-x: hidden;'") |>
+  kableExtra::kable_styling(font_size = 20) |>
+  kableExtra::pack_rows("s", 1, 12) |>
+  kableExtra::add_header_above(c(" " = 1, "m" = 6, " " = 1))
+```
+
+:::::
+
+## Example: Rolling two dice {.half-title}
+
+::::: {.column width="45%"}
+
+Are $S$ and $M$ independent?
+
+:::: {.nobullet}
++  $p_S(6)p_M(4)=\frac{35}{{36^2}}\neq \frac{2}{36}=p_{S,M}(6,4)$
++  $S$ and $M$ are dependent.
+::::
+
+:::: {.note}
+You can also check using the cumulative distribution functions.
+::::
+
+:::::
+::::: {.full-height .right}
+
+:::: {}
+$$F_{S,M}(s,m)$$
+:::
+
+```{r}
+smcdf |>
+  as.data.frame() |>
+    mutate(
+    `4` = kableExtra::cell_spec(
+      `4`, 
+      color = ifelse(c(rep(F, 4), T, rep(F, 6), T), "white", "rgb(105, 105, 105)"),
+      background = ifelse(c(rep(F, 4), T, rep(F, 6), T), palette()[5], "none")
+      ), 
+    `\\(F_S(s)\\)` = kableExtra::cell_spec(
+      `\\(F_S(s)\\)`, 
+      color = ifelse(c(rep(F, 4), T, rep(F, 6), T), "white", "rgb(105, 105, 105)"),
+      background = ifelse(c(rep(F, 4), T, rep(F, 7)), palette()[5], "none")
+      )) |>
+  knitr::kable(escape = FALSE, booktabs = TRUE,
+             table.attr = "style='overflow-x: hidden;'") |>
+  kableExtra::kable_styling(font_size = 20) |>
+  kableExtra::pack_rows("s", 1, 12) |>
+  kableExtra::add_header_above(c(" " = 1, "m" = 6, " " = 1))
+```
+
+:::::
+
+## Example: Quick exercise 9.2 from Dekking et al.
+
+::::::::: {.columns}
+:::::::: {.column}
+
+If $X$ and $Y$ are independent, can we retract the value of $\varepsilon$?
+
+:::: {.fragment .note}
+If they are independent, $p_X(a)p_Y(b)=p(a,b)$ for $a\in\{0,1\}$ and $b\in\{a,b\}$.
+::::
+:::: {.fragment .nobullet}
++  Yes, $\varepsilon = 0$.
+::::
+
+
+
+::::::::
+:::::::: {.column}
+
+
+```{r}
+#| tbl-cap: |
+#|    Joint probility mass function, 
+#|    $p(a, b)$.
+knitr::kable(qex92, escape = FALSE, booktabs = TRUE,
+             align = c('l', 'c', 'c', 'r'),
+             table.attr = "style='width: 80%; overflow-x: hidden;'") |>
+  kableExtra::kable_styling(font_size = 20) |>
+  kableExtra::pack_rows("a", 1, 2) |>
+  kableExtra::add_header_above(c(" " = 1, "b" = 2, " " = 1)) |>
+  kableExtra::row_spec(3, italic = TRUE, background = "#696969", color = "white") |>
+  kableExtra::column_spec(4, italic = TRUE, background = "#696969", color = "white")
+```
+
+::::::::
+:::::::::
+
+## Independent continuous random variables {.half-title .center}
+
+:::: {.column width="45%"}
+::: {.note}
+$F\left(x, y\right) = F_X\left(x\right)F_Y\left(y\right)$ for all possible values of $x$ and $y$ implies $\frac{d}{dx}\frac{d}{dy} F\left(x, y\right) = \frac{d}{dx} F_X\left(x\right) \frac{d}{dy} F_Y\left(y\right)$ for all possible values of $x$ and $y$.
+:::
+::::
+
+:::::: {.full-height .right}
+::: {.definition .fragment}
+The continuous random variables $X$ and $Y$, with joint probability density function $f$, are **independent** if $f(x,y)=f_X(x)f_Y(y)$ for all possible values of $x$ and $y$.
+:::
+::::::
+
+## Example: A joint probability density function
+
+```{r}
+#| eval: false
+#| include: false
+jpdf278
+```
+
+::::: {.columns}
+:::: {.column}
+
+Suppose $X$ and $Y$ have a joint continuous distribution with joint density
+
+$$f_{X,Y}\left(x,y\right)=\begin{cases}120 x^3 y & x\ge 0, y\ge 0, \\
+& \quad x+y\le1 \\ 
+0 &\text{otherwise.}\end{cases}$$
+
+Are $X$ and $Y$ independent?
+
+::: {.fragment .note}
+$f_X(x)=\begin{cases}60x^3(1-x)^2 & 0\le x \le 1 \\ 0 & \text{otherwise}\end{cases}$
+:::
+
+::::
+:::: {.column}
+
+::: {.fragment .nobullet}
++  When $0\le y \le 1$,  
+$\phantom{=}f_Y(y)$  
+$= \int_0^{1-y} 120x^3ydx$  
+$= 30y(1-y)^4$.
+:::
+::: {.fragment .nobullet}
++  $f_X(x)f_Y(y)\neq f_{X,Y}(x,y)$ for $(x,y)$  
+  that satisfy $x\ge 0$, $y\ge 0$, $x+y\le 1$.
+:::
+::: {.fragment .nobullet}
++  NO, they are not independent.
+:::
+::::
+:::::
+
+## Independence of more than two variables {.half-title}
+
+:::::: {.columns}
+::::: {.column width="20%"}
+:::::
+::::: {.column width="80%"}
+::: {.definition}
+For any number of random variables, $X_1$, $X_2$, ..., $X_n$, they are **pairwise independent** if $X_j$ and $X_k$ are independent for all $j\neq k$, $1\le j,k \le n$.
+
+For any number of variables, $X_1$, $X_2$, ..., $X_n$, they are **independent** if $F\left(x_1,x_2,\ldots,x_n\right)=\prod_{i=1}^n F_{X_i}\left(x_i\right)$.
+
+You can also write the definition with $p_{x_i}$ for discrete random variables with joint probability mass function $p$ or with $f_{x_i}$ for continuous random variables with joint density function $f$.
+:::
+:::::
+::::::
+
+## Example: Maximum among independent $U(0,1)$
+
+::::: {.columns}
+:::: {.column}
+
+Let $X_1$, $X_2$, $X_3$, ..., $X_n$ be independent and identically distributed $U(0,1)$ random variables. Let $X_{(n)}$ be the maximum value among them. 
+
+What is the cumulative distribution function of $X_{(n)}$? How about its probability density function?
+
+:::: {.fragment .note}
+$X_{(n)} \le x$ implies $X_i \le x$ for all $i=1,2,\ldots n$. 
+::::
+
+::::
+:::: {.column}
+::: {.incremental .nobullet}
++  $P\left(X_{(n)}\le x\right)$ $=P\left(X_1\le x, X_2\le x, \cdots, X_n\le x\right)$
+:::
+::::: {.fragment}
+::: {.note}
+$X_1$, $X_2$, ... $X_n$ are independent.
+:::
+::: {.nobullet}
++  $=P(X_1\le x)P(X_2\le x)\cdots P(X_n\le x)$
+:::
+::::
+::: {.fragment .nobullet}
++  $=\begin{cases} 0 & x <0 \\
+x^n & 0\le x \le 1 \\
+1 & x>0\end{cases}$
+:::
+::::
+:::::
+
+## Independence under transformation {.half-title .center}
+
+:::::: {.full-height .right}
+::: {.definition}
+
+Let $X_1$, $X_2$, ..., $X_n$ be independent random variables. For each $i\in\left\{1,2,\ldots,n\right\}$, let $h_i:\mathbb{R}\to\mathbb{R}$ be a function and define the random variable
+
+$$Y_i=h_i\left(X_i\right).$$
+
+Then, $Y_1$, $Y_2$, ..., $Y_n$ are also independent.
+
+:::
+::::::
+
+# R worksheet
+
+## Install `learnr` and run R worksheet {.half-title}
+
+:::: {.column width="45%"}
+1.   Click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main) to install `learnr` on [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+
+2.   Follow [this link](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Frlesson07&urlpath=shiny%2Frlesson07%2F&branch=main) to open the worksheet
+::::
+
+:::: {.full-height .right}
+
+<br />
+<br />
+
+If you see an error, try:
+
+::: {.note}
+1. Log in to [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2. Find `rlesson07` from _Files_ pane
+3. Click _Run Document_ 
+:::
+
+Other steps you may try:
+
+::: {.note}
+1.  Remove any `.Rmd` and `.R` files on the home directory of [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2.  In RStudio, 
+    i. Click `Tools` > `Global Options`
+    ii. Uncheck _"Restore most recently opened project at startup"_
+3.  Run `install.packages("learnr")` in RStudio after the steps above or click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main)
+:::
+
+::::
+
+
+# Summary
+
+
+:::: {.full-height .right}
+
++  Joint distributions of two or more random variables can be described using their joint cumulative distribution functions and joint probability mass functions or joint probability density functions.
++  Joint distributions contain the information on the relationship between random variables which the marginal distributions of the individual random variables do not explain.
++  Independent random variables each describe events that are independent of each other.
+
+::::
+
+
+## Practice questions {.center}
+
+Chapter 9, [Dekking et al.](https://librarysearch.library.utoronto.ca/permalink/01UTORONTO_INST/14bjeso/alma991106910545806196)
+
++   Read Section 9.3, 9.5
++   Quick Exercises 9.3, 9.4, 9.5
++   All Exercises
+
++   See a collection of corrections by the author [here](https://www.tudelft.nl/ewi/over-de-faculteit/afdelingen/applied-mathematics/applied-probability/education/mips)

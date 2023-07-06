@@ -1,0 +1,773 @@
+---
+title: "Lecture 11: Central Limit Theorem"
+subtitle: "STA237: Probability, Statistics, and Data Analysis I"
+author: "Michael Jongho Moon"
+institute: "PhD Student, DoSS, University of Toronto"
+date: "June 19, 2023"
+date-format: full
+format:
+  revealjs:
+    width: 1280
+    height: 720
+    theme: [default, ../theme.scss]
+    css: "style.css"
+    chalkboard: true
+    footer: |
+      &copy; 2023. Michael J. Moon. University of Toronto. 
+      
+      Sharing, posting, selling, or using this material
+      outside of your personal use in this course is
+      <strong>NOT</strong> permitted under any circumstances.
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(fontawesome)
+knitr::opts_chunk$set(eval = TRUE, echo = FALSE)
+palette(RColorBrewer::brewer.pal(8, "Accent"))
+# plot(1:5, col = 1:5, cex = 2, pch = 16)
+theme_sizes <- theme(
+    plot.title = element_text(size = 32),
+    plot.subtitle = element_text(size = 24),
+    axis.text = element_text(size = 20),
+    axis.title = element_text(size = 24, margin = margin(1, 1, 1, 1, unit = "lines")),
+    axis.title.y = element_text(angle = 90),
+    legend.text = element_text(size = 20)
+  )
+```
+
+
+
+## Recall: Law of large numbers {.center .half-title}
+
+::::::: {.full-height .right}
+
+::: {.definition}
+Suppose $X_1$, $X_2$, ..., $X_n$ are independent random variables with expectation $\mu$ and variance $\sigma^2$. Then for any $\varepsilon > 0$,
+
+$$\lim_{n\to\infty}P\left(\left|\overline{X}_n-\mu\right|>\varepsilon\right)=0,$$
+
+where $\overline{X}_n=\left.\sum_{i=1}^n X_i\right/n$.
+
+That is, $\overline{X}_n$ converges in probability to $\mu$.
+:::
+:::::::
+
+## Distributions of sample means {.center}
+
+
+```{r eval=FALSE}
+set.seed(237)
+N <- 500
+xbars <- tibble(
+  xbar = c(
+    replicate(N, mean(rnorm(10, 1))),
+    replicate(N, mean(rnorm(100, 1))),
+    replicate(N, mean(rnorm(10000, 1))),
+    replicate(N, mean(rbinom(10, 10, 1/10))),
+    replicate(N, mean(rbinom(100, 10, 1/10))),
+    replicate(N, mean(rbinom(10000, 10, 1/10))),
+    replicate(N, mean(rexp(10))),
+    replicate(N, mean(rexp(100))),
+    replicate(N, mean(rexp(10000)))
+  ),
+  size = rep(rep(c(10, 100, 10000), each = N), 3),
+  dist = rep(c("N(1,1)", "Binom(10, 1/10)", "Exp(1)"), 3 * N)
+)
+saveRDS(xbars, "xbars.RDS")
+```
+
+
+:::::: {.columns}
+::::: {.column width="70%"}
+
+
+```{r}
+#| layout-ncol: 3
+#| fig-asp: .7
+xbars <- readRDS("xbars.RDS")
+plot_base <- ggplot() +
+  theme_void() +
+  scale_x_continuous(breaks = c(.75, 1, 1.25),
+                     labels = expression(frac(3,4), 1, frac(5,4))) +
+  theme(
+    plot.title = element_text(size = 52),
+    plot.subtitle = element_text(size = 46),
+    axis.text.x = element_text(size = 42)
+  ) 
+p1 <- plot_base +
+  geom_histogram(aes(x = xbar, y = after_stat(density)), 
+                 data = filter(xbars, size == 10, dist == "N(1,1)"), 
+                 bins = 30) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = palette()[3], linewidth = 3) +
+  labs(title = "N(1,1)", subtitle = "n=10")
+p2 <- plot_base +
+  geom_histogram(aes(x = xbar, y = after_stat(density)), 
+                 data = filter(xbars, size == 100, dist == "N(1,1)"), 
+                 bins = 30) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = palette()[3], linewidth = 3) +
+  labs(subtitle = "n=100")
+p3 <- plot_base +
+  geom_histogram(aes(x = xbar, y = after_stat(density)), 
+                 data = filter(xbars, size == 10000, dist == "N(1,1)"), 
+                 bins = 30) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = palette()[3], linewidth = 3) +
+  labs(subtitle = "n=10 000")
+p4 <- plot_base +
+  geom_histogram(aes(x = xbar, y = after_stat(density)), , 
+                 data = filter(xbars, size == 10, dist == "Binom(10, 1/10)"), 
+                 bins = 30) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = palette()[3], linewidth = 3) +
+  labs(title = "Binom(10,1/10)", subtitle = "n=10")
+p5 <- plot_base +
+  geom_histogram(aes(x = xbar, y = after_stat(density)), 
+                 data = filter(xbars, size == 100, dist == "Binom(10, 1/10)"), 
+                 bins = 30) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = palette()[3], linewidth = 3) +
+  labs(subtitle = "n=100")
+p6 <- plot_base +
+  geom_histogram(aes(x = xbar, y = after_stat(density)), 
+                 data = filter(xbars, size == 10000, dist == "Binom(10, 1/10)"), 
+                 bins = 30) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = palette()[3], linewidth = 3) +
+  labs(subtitle = "n=10 000")
+p7 <- plot_base +
+  geom_histogram(aes(x = xbar, y = after_stat(density)), 
+                 data = filter(xbars, size == 10, dist == "Exp(1)"), 
+                 bins = 30) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = palette()[3], linewidth = 3) +
+  labs(title = "Exp(1)", subtitle = "n=10")
+p8 <-plot_base +
+  geom_histogram(aes(x = xbar, y = after_stat(density)), 
+                 data = filter(xbars, size == 100, dist == "Exp(1)"), 
+                 bins = 30) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = palette()[3], linewidth = 3) +
+  labs(subtitle = "n=100")
+p9 <- plot_base +
+  geom_histogram(aes(x = xbar, y = after_stat(density)), 
+                 data = filter(xbars, size == 10000, dist == "Exp(1)"), 
+                 bins = 30) +
+  geom_vline(xintercept = 1, linetype = "dashed", colour = palette()[3], linewidth = 3) +
+  labs(subtitle = "n=10 000")
+p1 + coord_cartesian(xlim = c(.5, 1.5))
+p2 + coord_cartesian(xlim = c(.5, 1.5))
+p3 + coord_cartesian(xlim = c(.5, 1.5))
+p4 + coord_cartesian(xlim = c(.5, 1.5))
+p5 + coord_cartesian(xlim = c(.5, 1.5))
+p6 + coord_cartesian(xlim = c(.5, 1.5))
+p7 + coord_cartesian(xlim = c(.5, 1.5))
+p8 + coord_cartesian(xlim = c(.5, 1.5))
+p9 + coord_cartesian(xlim = c(.5, 1.5))
+```
+
+:::::
+::::: {.column width="30%"}
+
+:::: {.nobullet}
++  Convergence in probability to the [mean]{.accent-three} suggest that the sampling distribution of $\overline{X}_n$ becomes narrower as $n$ increases.
++  The convergence occurs regardless of the originating distribution.
+::::
+
+:::::
+::::::
+
+
+## Distributions of sample means {.center}
+
+:::::: {.columns}
+::::: {.column width="70%"}
+
+```{r}
+#| layout-ncol: 3
+#| fig-asp: .7
+p1 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 10, dist == "N(1,1)")) + 
+  coord_cartesian(xlim = c(.5, 1.5))
+p2 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 100, dist == "N(1,1)"))
+p3 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 10000, dist == "N(1,1)"))
+p4 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 10, dist == "Binom(10, 1/10)")) +
+  coord_cartesian(xlim = c(.5, 1.5))
+p5 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 100, dist == "Binom(10, 1/10)"))
+p6 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 10000, dist == "Binom(10, 1/10)"))
+p7 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 10, dist == "Exp(1)")) +
+  coord_cartesian(xlim = c(.5, 1.5))
+p8 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 100, dist == "Exp(1)"))
+p9 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 10000, dist == "Exp(1)"))
+```
+
+:::::
+::::: {.column width="30%"}
+
+:::: {.nobullet}
++  We also observe that their distributions become roughly [symmetric bell]{.accent-four} shapes with larger sample sizes.
++  This behaviour also seems to occur regardless of the underlying distribution shape.
+::::
+
+:::::
+::::::
+
+
+## Convergence in distribution {.center .half-title}
+
+
+::::: {.column width="45%"}
+:::: {.fragment .note}
+The distribution of $Y_n$ becomes closer and closer to that of $W$.
+::::
+:::::
+
+:::::::: {.full-height .right}
+
+::: {.definition}
+
+Let $Y_1$, $Y_2$, $Y_3$, ... be an infinite sequence of random variables, and let $W$ be another random variable. Then, we say the sequence $\left\{Y_n\right\}$ **converges in distribution** to $W$ if for all $w\in\mathbb{R}$ such that $P\left(W = w\right)=0$, we have
+
+$$\lim_{n\to\infty}P\left(Y_n\le w\right)=P\left(W\le w\right)$$
+
+and we write
+
+$$Y_n\overset{d}{\to}W.$$
+
+:::
+
+::::::::
+
+
+## Example: Binomial for infinite trials
+
+::::::::: {.columns}
+:::::::: {.column width="40%"}
+
+Suppose $X_n\sim\text{Binom}\left(n,\theta_n\right)$ describes the number of
+success of $n$ independent sub-intervals of an equal length where $\theta_n=\frac{\lambda}{n}$
+for some $\lambda>0$ that represents a rate of success.
+
+What happens when you make the sub-intervals infinitesimally small?
+
+
+::::::::
+:::::::: {.column .fragment width="60%"}
+
+:::: {.note}
+We have seen that $\lim_{n\to\infty}p_{X_n}(x)=p_X(x)$ where $X\sim\text{Pois}(\lambda)$. Recall how we derived the pmf of a Poisson random variabel in [Lecture 3](https://mjmoon.gitlab.io/sta237/slides23/03/#/section-12).
+::::
+::::: {.fragment .nobullet}
++  $\lim_{n\to\infty}p_{X_n}(x)=\lim_{n\to\infty}\binom{n}{x}\left(\frac{\lambda}{n}\right)^x\left(1-\frac{\lambda}{n}\right)^{n-x}$
++  $\phantom{lim_{n\to\infty}p_X(x)}=\frac{\lambda^x}{x!}\lim_{n\to\infty}\frac{n!}{\left(n-x\right)!n^x}\left(1-\frac{\lambda}{n}\right)^{n-x}$
++  $\phantom{lim_{n\to\infty}p_X(x)}\vdots$
++  $\phantom{lim_{n\to\infty}p_X(x)}=\frac{\lambda^xe^{-\lambda}}{x!}$
+:::::
+:::: {.fragment}
+$$X_n\overset{d}{\to}X, \quad X\sim\text{Pois}\left(\lambda\right)$$
+::::
+
+::::::::
+:::::::::
+
+
+# Central limit theorem {.half-title .center}
+
+::::: {.column width="45%"}
+:::: {.incremental .nobullet}
++  We have observed that sample menas $\overline{X}_n$ converge to distributions with similar shapes
+regardless of the originating distribution.
++  The central limit theorem explains to which distribution they converge.
+::::
+:::::
+
+:::::::: {.full-height .right}
+
+```{r}
+#| layout-ncol: 3
+#| fig-asp: .7
+p1 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 10, dist == "N(1,1)")) + 
+  coord_cartesian(xlim = c(.5, 1.5))
+p2 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 100, dist == "N(1,1)"))
+p3 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 10000, dist == "N(1,1)"))
+p4 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 10, dist == "Binom(10, 1/10)")) +
+  coord_cartesian(xlim = c(.5, 1.5))
+p5 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 100, dist == "Binom(10, 1/10)"))
+p6 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 10000, dist == "Binom(10, 1/10)"))
+p7 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 10, dist == "Exp(1)")) +
+  coord_cartesian(xlim = c(.5, 1.5))
+p8 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 100, dist == "Exp(1)"))
+p9 +
+  geom_density(aes(x = xbar), color = palette()[4], linewidth = 3,
+               data = filter(xbars, size == 10000, dist == "Exp(1)"))
+```
+
+::::::::
+
+## The central limit theorem {.center}
+
+::: {.definition}
+
+Let $X_1$, $X_2$, $X_3$, ... be _independent and identically distributed random variables_ with $E\left(X_1\right)=\mu<\infty$ and $0< \text{Var}\left(X_1\right)=\sigma^2<\infty$. For $n\ge1$, let
+
+$$Z_n=\frac{\sqrt{n}\left(\overline{X}_n-\mu\right)}{\sigma},$$
+
+where $\overline{X}_n=\left.\sum_{i=1}^nX_i\right/n$. Then, for any number $a\in\mathbb{R}$,
+
+$$\lim_{n\to\infty}P\left(Z_n\le a\right)=\Phi\left(a\right),$$
+
+where $\Phi$ is the cumulative distribution function of the standard normal distribution. 
+:::
+
+
+## The central limit theorem {.half-title .center}
+
+:::: {.column width="45%"}
+::: {.fragment .note}
+In practice, $\overline{X}_n$ approximately follows the distribution of $\left(Z\frac{\sigma}{\sqrt{n}}+\mu\right)$
+or $N\left(\mu, \frac{\sigma^2}{n}\right)$ for large $n$.
+
+:::
+::::
+
+::::: {.full-height .right}
+::: {.definition}
+
+In other words,
+
+$$\frac{\sqrt{n}\left(\overline{X_n}-\mu\right)}{\sigma}\overset{d}{\to}Z,$$
+
+where $Z\sim N\left(0,1\right)$.
+:::
+:::::
+
+## Example: CSTAD {.half-title}
+
+:::: {.column width="45%"}
+Recall the survey on Canadian student smoking prevalence.
+
+::: {.nobullet}
++  As you increase the sample size $n$, the sampling distribution of $T_n$ 
+not only became narrower by the LLN . . .
+:::
+::::
+
+
+:::::: {.full-height .right}
+::::: {.columns}
+:::: {.column width="12%"}
+::::
+:::: {.column width="75%"}
+
+```{r}
+#| layout-ncol: 1
+set.seed(237)
+n <- 25
+x <- rep(1:n, n)
+y <- rep(1:n, each = n)
+z <- rbinom(n^2, 1, 0.03)
+pop <- tibble(x = x, y = y, z = z) |>
+  mutate(sampled = sample(c(rep(TRUE, 100), rep(FALSE, n^2 - 100))))
+p0 <- mean(pop$z)
+dist_20 <- ggplot(
+  mapping = aes(x = replicate(1000, mean(sample(pop$z, 20))))) +
+  theme_classic() +
+  geom_histogram(aes(y = after_stat(density)),
+                 bins = 20) +
+  geom_vline(xintercept = p0, color = palette()[3], 
+             linetype = "dotted", linewidth = 2) +
+  labs(x = NULL, y = NULL, title = expression(T[20])) +
+  scale_y_continuous(breaks = 0) +
+  theme_sizes
+dist_100 <- ggplot(
+  mapping = aes(x = replicate(1000, mean(sample(pop$z, 100))))) +
+  theme_classic() +
+  geom_histogram(aes(y = after_stat(density)),
+                 bins = 20) +
+  geom_vline(xintercept = p0, color = palette()[3], 
+             linetype = "dotted", linewidth = 2) +
+  labs(x = NULL, y = NULL, title = expression(T[100])) +
+  scale_y_continuous(breaks = 0) +
+  theme_sizes
+dist_500 <- ggplot(
+  mapping = aes(x = replicate(1000, mean(sample(pop$z, 500))))
+) +
+  theme_classic() +
+  geom_histogram(aes(
+                     y = after_stat(density)), 
+                 bins = 20) +
+  geom_vline(xintercept = p0, color = palette()[3], 
+             linetype = "dotted", linewidth = 2) +
+  labs(x = NULL, y = NULL, title = expression(T[500])) +
+  scale_y_continuous(breaks = 0) +
+  theme_sizes
+dist_20 +
+  scale_x_continuous(breaks = c(0, p0, 0.2),
+                     labels = expression(0, theta, 0.2)) +
+  coord_cartesian(xlim = c(0, 0.2), clip = "off")
+dist_100 +
+  scale_x_continuous(breaks = c(0, p0, 0.2),
+                     labels = expression(0, theta, 0.2)) +
+  coord_cartesian(xlim = c(0, 0.2), clip = "off")
+dist_500 +
+  scale_x_continuous(breaks = c(0, p0, 0.2),
+                     labels = expression(0, theta, 0.2)) +
+  coord_cartesian(xlim = c(0, 0.2), clip = "off")
+```
+
+::::
+:::::
+::::::
+
+
+## Example: CSTAD {.half-title}
+
+:::: {.column width="45%"}
+Recall the survey on Canadian student smoking prevalence.
+
+::: {.nobullet}
++  As you increase the sample size $n$, the sampling distribution of $T_n$ 
+not only became narrower by the LLN 
+
++  but also closer to a [symmetrical and bell-shaped]{.accent-four} distribution by the CLT.
+:::
+::::
+
+
+:::::: {.full-height .right}
+::::: {.columns}
+:::: {.column width="12%"}
+::::
+:::: {.column width="75%"}
+
+```{r}
+#| layout-ncol: 1
+dist_20 +
+  scale_x_continuous(breaks = c(0, p0, 0.2),
+                     labels = expression(0, theta, 0.2)) +
+  geom_density(color = palette()[4], linewidth = 3, bw = .005) +
+  coord_cartesian(xlim = c(0, 0.2), clip = "off")
+dist_100 +
+  scale_x_continuous(breaks = c(0, p0, 0.1),
+                     labels = expression(0, theta, 0.1)) +
+  geom_density(color = palette()[4], linewidth = 3, bw = .005) +
+  coord_cartesian(xlim = c(0, 0.1), clip = "off")
+dist_500 +
+  scale_x_continuous(breaks = c(0.02, p0, 0.045),
+                     labels = expression(0.02, theta, 0.045)) +
+  geom_density(color = palette()[4], linewidth = 3, bw = .001) +
+  coord_cartesian(xlim = c(0.02, 0.045), clip = "off")
+```
+
+::::
+:::::
+::::::
+
+## Example: Normal approximation of the binomial distribution {.half-title .center}
+
+::::::::: {.full-height .right}
+
+Suppose $Y\sim \text{Binom}\left(50, 0.3\right)$ and we are interested in 
+$P(Y\le 20)$. 
+
+::: {.incremental .nobullet}
+
++  $Y\sim\sum_{i=1}^{50} W_i$ where $W_i\sim\text{Ber}(0.3)$ independently.
++  We may use the CLT to approximate 
+$$\phantom{=}P\left(Y\le 20\right)$$
+$$=P\left(\frac{Y}{50} \le \frac{20}{50}\right)$$
+$$=P\left(\overline{W}_{50}\le 0.4\right)$$
++  Recall $E(W_1)=0.3$ and $\text{Var}(W_1)=0.3\cdot 0.7=0.21$
+
+:::
+:::::::::
+
+## {}
+
+::::::::::: {.columns}
+:::::::::: {.column width="60%"}
+
+Using exact $F_Y(y)$
+
+:::: {.nobullet}
++  $F_Y(20) = \sum_{y=0}^{20} p_Y(y)$
++  $\phantom{F_Y(20)} = \sum_{y=0}^{20} \binom{50}{y}0.3^{y}0.7^{50 - y}$
+:::: 
+:::: {.fragment}
+::: {.note}
+`pbinom(20, 50, 0.3)` in R.
+:::
+::: {.nobullet}
++  $\phantom{F_Y(20)} \approx 0.952$ 
+:::
+::::
+
+
+::::: {.fragment}
+
+Approximating via $Z\sim N(0,1)$
+
+:::: {.nobullet}
++  $F_Y(20) \approx P\left(Z\cdot \sqrt{0.21 / 50} + 0.3 \le 0.4\right)$
+::::
+:::: {.fragment}
+::: {.note}
+`pnorm(.4, .3, sqrt(.21 / 50))` in R
+:::
+::: {.nobullet}
++  $\phantom{F_Y(y)} \approx 0.939$ 
+:::
+::::
+:::::
+::::::::::
+:::::::::: {.column width="40%" .fragment}
+
+$$Z_{50} = 50 \cdot \left(Z\sqrt{\frac{0.21}{50}}+0.3\right)$$
+
+```{r}
+#| fig-asp: 1
+pmfy <- data.frame(
+  y = 0:20,
+  pmf = dbinom(0:20, 50, 0.3)
+)
+ggplot(pmfy) +
+  theme_classic() +
+  geom_bar(aes(x = y, y = pmf), stat = "identity", width = 1,
+           fill = palette()[3], color = palette()[3]) +
+  geom_function(fun = dnorm, args = list(mean = 15, sd = sqrt(.21 * 50)),
+                color = palette()[5], linewidth = 3) +
+  scale_y_continuous(name = "", breaks = 0) +
+  annotate("text", x = 15, y = dbinom(15, 50, .3) / 2, label = "p[Y]",
+           colour = "white", size = 16, parse = TRUE) +
+  annotate("text", x = 10, y = dnorm(10, 15, sqrt(.21 * 50)) + .02,
+           colour = palette()[5], label = "f[Z[n]]",
+           size = 16, parse = TRUE, hjust = 1) +
+  theme_sizes
+```
+
+
+::::::::::
+:::::::::::
+
+## {}
+
+:::::::: {.columns}
+::::::: {.column width="30%"}
+
+$$\overline{W}_{5}\quad\text{vs}\quad Z_5$$
+
+```{r}
+#| fig-asp: 1
+m <- 5
+pmfy <- data.frame(
+  y = 0:m,
+  pmf = dbinom(0:m, m, 0.3)
+)
+ggplot(pmfy) +
+  theme_classic() +
+  geom_bar(aes(x = y, y = pmf), stat = "identity", width = 1,
+           fill = palette()[3], color = palette()[3]) +
+  geom_function(fun = dnorm, args = list(mean = m * .3, sd = sqrt(.21 * m)),
+                color = palette()[5], linewidth = 3) +
+  scale_y_continuous(name = "", breaks = 0) +
+  coord_cartesian(xlim = c(-.5, m) , clip = "off") +
+  annotate("text", x = m * .3, y = dbinom(round(m * .3), m, .3) / 2, label = "p[Y]",
+           colour = "white", size = 16, parse = TRUE) +
+  annotate("text", x = m * .1, y = dnorm(m * .2, m * .3, sqrt(.21 * m)) + .02,
+           colour = palette()[5], label = "f[Z[n]]",
+           size = 16, parse = TRUE, hjust = 1) +
+  theme_sizes
+```
+
+:::: {.nobullet  .note}
++  `pbinom(2, 5, .3)` $\approx 0.837$
++  `pnorm(2, 1.5, sqrt(.21 * 5))` $\approx 0.687$
+::::
+
+:::::::
+::::::: {.column width="5%"}
+:::::::
+::::::: {.column width="30%"}
+
+$$\overline{W}_{50}\quad\text{vs}\quad Z_{50}$$
+
+
+```{r}
+#| fig-asp: 1
+m <- 50
+pmfy <- data.frame(
+  y = 0:m,
+  pmf = dbinom(0:m, m, 0.3)
+)
+ggplot(pmfy) +
+  theme_classic() +
+  geom_bar(aes(x = y, y = pmf), stat = "identity", width = 1,
+           fill = palette()[3], color = palette()[3]) +
+  geom_function(fun = dnorm, args = list(mean = m * .3, sd = sqrt(.21 * m)),
+                color = palette()[5], linewidth = 3) +
+  scale_y_continuous(name = "", breaks = 0) +
+  coord_cartesian(xlim = c(-.5, m) , clip = "off") +
+  annotate("text", x = m * .3, y = dbinom(round(m * .3), m, .3) / 2, label = "p[Y]",
+           colour = "white", size = 16, parse = TRUE) +
+  annotate("text", x = m * .1, y = dnorm(m * .2, m * .3, sqrt(.21 * m)) + .02,
+           colour = palette()[5], label = "f[Z[n]]",
+           size = 16, parse = TRUE, hjust = 1) +
+  theme_sizes
+```
+
+
+:::: {.nobullet  .note}
++  `pbinom(20, 50, .3)` $\approx 0.952$
++  `pnorm(20, 15, sqrt(.21 * 50))` $\approx 0.939$
+::::
+:::::::
+::::::: {.column width="5%"}
+:::::::
+::::::: {.column width="30%"}
+
+$$\overline{W}_{5000}\quad\text{vs}\quad Z_{5000}$$
+
+
+```{r}
+#| fig-asp: 1
+m <- 500
+pmfy <- data.frame(
+  y = 0:m,
+  pmf = dbinom(0:m, m, 0.3)
+)
+ggplot(pmfy) +
+  theme_classic() +
+  geom_bar(aes(x = y, y = pmf), stat = "identity", width = 1,
+           fill = palette()[3], color = palette()[3]) +
+  geom_function(fun = dnorm, args = list(mean = m * .3, sd = sqrt(.21 * m)),
+                color = palette()[5], linewidth = 3) +
+  scale_y_continuous(name = "", breaks = 0) +
+  coord_cartesian(xlim = c(-.5, m) , clip = "off") +
+  annotate("text", x = m * .3, y = dbinom(round(m * .3), m, .3) / 2, label = "p[Y]",
+           colour = "white", size = 16, parse = TRUE) +
+  annotate("text", x = m * .1, y = dnorm(m * .2, m * .3, sqrt(.21 * m)) + .02,
+           colour = palette()[5], label = "f[Z[n]]",
+           size = 16, parse = TRUE, hjust = 1) +
+  theme_sizes
+```
+
+:::: {.nobullet .note}
++  `pbinom(200, 500, .3)` $\approx 0.9999992$
++  `pnorm(200, 150, sqrt(.21 * 500))` $\approx 0.9999995$
+::::
+:::::::
+::::::::
+
+
+## {}
+
+:::::::: {.columns}
+::::::: {.column width="30%"}
+
+$$\overline{W}_{5}\quad\text{vs}\quad Z_5$$
+
+```{r}
+#| fig-asp: 1
+m <- 5
+pmfy <- data.frame(
+  y = 0:m,
+  pmf = dbinom(0:m, m, 0.3)
+)
+ggplot(pmfy) +
+  theme_classic() +
+  geom_bar(aes(x = y, y = pmf), stat = "identity", width = 1,
+           fill = palette()[3], color = palette()[3]) +
+  geom_function(fun = dnorm, args = list(mean = m * .3, sd = sqrt(.21 * m)),
+                color = palette()[5], linewidth = 3) +
+  scale_y_continuous(name = "", breaks = 0) +
+  coord_cartesian(xlim = c(-.5, m) , clip = "off") +
+  annotate("text", x = m * .3, y = dbinom(round(m * .3), m, .3) / 2, label = "p[Y]",
+           colour = "white", size = 16, parse = TRUE) +
+  annotate("text", x = m * .1, y = dnorm(m * .2, m * .3, sqrt(.21 * m)) + .02,
+           colour = palette()[5], label = "f[Z[n]]",
+           size = 16, parse = TRUE, hjust = 1) +
+  theme_sizes
+```
+
+
+:::::::
+::::::: {.column width="70%"}
+
+:::: {.nobullet}
++  With smaller number of trials, $n$, the "gaps" are larger and the approximation isn't precise.
+::::
+
+:::: {.nobullet}
++  With larger number of trials, $n$, the approximation becomes more precise.
+::::
+
+:::::::
+::::::::
+
+
+# Summary
+
+
+:::: {.full-height .right}
+
+Given an independent and identically distributed sample from a population of finite mean $\mu$ and positive finite variance $\sigma^2$,
+
+::: {.nobullet}
++  the sample mean converges in distribution to a normal distribution
+with mean $\mu$ and  $\sigma/n$
+:::
+
+We often use the central limit theorem to approximate distributions of finite samples
+when the sample size is sufficiently large.
+
+::::
+
+
+# Review {.half-title .center}
+
+::::: {.full-height .right}
+
++  Weekly Activity 5 Questions
++  Selected questions from past exams
++  Questions
+
+:::::
+
+# Blackjack competition {.half-title .center}
+
+::::::: {.full-height .right}
+
++  If your group's player is selected, please explain your group's strategy.
++  Make your guess on [Quercus](https://q.utoronto.ca/courses/305478/quizzes/328355)
+
+:::::::

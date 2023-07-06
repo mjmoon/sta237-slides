@@ -1,0 +1,1362 @@
+---
+title: "Lecture 9: Computation with Random Variables"
+subtitle: "STA237: Probability, Statistics, and Data Analysis I"
+author: "Michael Jongho Moon"
+institute: "PhD Student, DoSS, University of Toronto"
+date: "June 12, 2023"
+date-format: full
+format:
+  revealjs:
+    width: 1280
+    height: 720
+    theme: [default, ../theme.scss]
+    css: "style.css"
+    chalkboard: true
+    footer: |
+      &copy; 2023. Michael J. Moon. University of Toronto. 
+      
+      Sharing, posting, selling, or using this material
+      outside of your personal use in this course is
+      <strong>NOT</strong> permitted under any circumstances.
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(fontawesome)
+knitr::opts_chunk$set(eval = TRUE, echo = FALSE)
+palette(RColorBrewer::brewer.pal(8, "Accent"))
+# plot(1:5, col = 1:5, cex = 2, pch = 16)
+theme_sizes <- theme(
+    plot.title = element_text(size = 32),
+    plot.subtitle = element_text(size = 24),
+    axis.text = element_text(size = 20),
+    axis.title = element_text(size = 24, margin = margin(1, 1, 1, 1, unit = "lines")),
+    axis.title.y = element_text(angle = 90),
+    legend.text = element_text(size = 20)
+  )
+```
+
+
+# Example: Bike tire pressure {.half-title}
+
+:::: {.column width="45%"}
+
+Adopted from Devore \& Berk  
+Chapter 5 Exercise 9 and 44
+
+::: {.text-center}
+`r fontawesome::fa("bicycle", height = "5em")`
+:::
+::::
+
+:::: {.full-height .right}
+
+<br />
+
+Each tire of a bicycle is supposed to be filled to a pressure of $4$ psi. Suppose the actual air pressure in each tire is a random variable $X$ for the front tire and $Y$ for the rear tire with joint probability density function $f$.
+
+$$f\left(x,y\right)=\begin{cases}
+K\left(x^2+y^2\right) & 1 \le x \le 5, \\
+& \quad 1 \le y \le 5 \\ 
+0 & \text{otherwise.}\end{cases}$$
+
+::::
+
+## {}
+
+::::: {.columns}
+::: {.text-center .column width="70%"}
+
+$$f\left(x,y\right)=\begin{cases}
+K\left(x^2+y^2\right) & 1 \le x \le 5, \\
+& \quad 1 \le y \le 5 \\ 
+0 & \text{otherwise.}\end{cases}$$
+
+:::
+::: {.text-center .column width="20%"}
+`r fontawesome::fa("bicycle", height = "1em")`  
+`r fontawesome::fa("bicycle", height = "2em")`  
+`r fontawesome::fa("bicycle", height = "3em")`
+:::
+::::
+
+What is the value of $K$?
+
+::::::: {.columns}
+:::::: {.column width="60%"}
+
+::::: {.nobullet .incremental}
++  $1=\int_{1}^{5}\int_{1}^{5}K(x^2 + y^2) dxdy$
++  $1=\int_{1}^{5}\int_{1}^{5}Kx^2 dxdy + \int_{1}^{5}\int_{1}^{5}Ky^2dydx$
++  $1=2\int_{1}^{5}K \frac{5^3 - 1^3}{3}dy$
++  $1=2K\frac{124}{3} \cdot \left(5 - 1\right)$
++  $1=\frac{992}{3}K$
+:::::
+::::::
+:::::: {.column width="40%"}
+
+::: {.fragment}
+$$K = \frac{3}{992}$$
+:::
+
+::::::
+:::::::
+
+## {}
+
+::::: {.columns}
+::: {.text-center .column width="70%"}
+
+$$f\left(x,y\right)=\begin{cases}
+K\left(x^2+y^2\right) & 1 \le x \le 5, \\
+& \quad 1 \le y \le 5 \\ 
+0 & \text{otherwise.}\end{cases}$$
+
+:::
+::: {.text-center .column width="20%"}
+`r fontawesome::fa("bicycle", height = "1em")`  
+`r fontawesome::fa("bicycle", height = "2em")`  
+`r fontawesome::fa("bicycle", height = "3em")`
+:::
+::::
+
+What is the value of $P(X<4, Y<4)$?
+
+::::::: {.columns}
+:::::: {.column}
+
+::::: {.nobullet .incremental}
++  $\phantom{=}P(X<4, Y<4)$
++  $=\int_{1}^{4}\int_{1}^{4}K(x^2 + y^2)dxdy$
++  $=\int_{1}^{4}\int_{1}^{4}Kx^2\ dxdy + \int_{1}^{4}\int_{1}^{4}Ky^2\ dydx$
++  $=2K\int_{1}^{4}\frac{4^3-1}{3}\ dy$
++  $=126K$
++  $=\frac{189}{496}$
+:::::
+::::::
+:::::: {.column}
+
+::: {.fragment}
+$$P(X<4, Y<4)=\frac{189}{496}$$
+:::
+
+::::::
+:::::::
+
+## {}
+
+::::: {.columns}
+::: {.text-center .column width="70%"}
+
+$$f\left(x,y\right)=\begin{cases}
+K\left(x^2+y^2\right) & 1 \le x \le 5, \\
+& \quad 1 \le y \le 5 \\ 
+0 & \text{otherwise.}\end{cases}$$
+
+:::
+::: {.text-center .column width="20%"}
+`r fontawesome::fa("bicycle", height = "1em")`  
+`r fontawesome::fa("bicycle", height = "2em")`  
+`r fontawesome::fa("bicycle", height = "3em")`
+:::
+::::
+
+What is $F_X(a)$?
+
+::::::: {.columns}
+:::::: {.column .fragment}
+
+For $1\le x\le 5$,
+
+::::: {.nobullet .incremental}
++  $f_X(x)=\int_{1}^{5} K(x^2+y^2) dy$
++  $\phantom{f_X(x)}=4Kx^2 + \frac{124}{3}K$
+:::::
+::::::
+:::::: {.column .fragment}
+
+For $1\le a\le 5$,  
+
+::: {.fragment .nobullet}
++  $F_X(a)=\int_{1}^a 4Kx^2+ \frac{124}{3}Kdx$
++  $\phantom{F_X(a)}=\frac{4}{3}K\left(a^3-1\right) +\frac{124}{3}K(a-1)$
++  $\phantom{F_X(a)}=\frac{1}{248}a^3 + \frac{1}{8}a - \frac{4}{31}$
+:::
+::::::
+:::::::
+
+## {}
+
+::::: {.columns}
+::: {.text-center .column width="70%"}
+
+$$f\left(x,y\right)=\begin{cases}
+K\left(x^2+y^2\right) & 1 \le x \le 5, \\
+& \quad 1 \le y \le 5 \\ 
+0 & \text{otherwise.}\end{cases}$$
+
+:::
+::: {.text-center .column width="20%"}
+`r fontawesome::fa("bicycle", height = "1em")`  
+`r fontawesome::fa("bicycle", height = "2em")`  
+`r fontawesome::fa("bicycle", height = "3em")`
+:::
+::::
+
+What is $F_X(a)$?
+
+::::::: {.columns}
+:::::: {.column}
+
+$$F_X(a) = \begin{cases}
+0 & a < 1 \\
+\frac{1}{248}a^3 + \frac{1}{8}a - \frac{4}{31} & 1\le a \le 5\\
+1 & a > 5
+\end{cases}$$
+
+::::::
+:::::::
+
+## {}
+
+::::: {.columns}
+::: {.text-center .column width="70%"}
+
+$$f\left(x,y\right)=\begin{cases}
+K\left(x^2+y^2\right) & 1 \le x \le 5, \\
+& \quad 1 \le y \le 5 \\ 
+0 & \text{otherwise.}\end{cases}$$
+
+:::
+::: {.text-center .column width="20%"}
+`r fontawesome::fa("bicycle", height = "1em")`  
+`r fontawesome::fa("bicycle", height = "2em")`  
+`r fontawesome::fa("bicycle", height = "3em")`
+:::
+::::
+
+What is $P(Y < 4 | X = 4)$?
+
+::::::: {.columns}
+:::::: {.column width="40%" .fragment}
+
+For some $x\in[1,5]$,
+
+:::: {.nobullet .incremental}
++  $f_{Y|X}(y|x)=\frac{f(x,y)}{f_X(x)}$
++  $\phantom{f_{Y|X}(y,x)}=\frac{K\left(x^2+y^2\right)}{K\left(4x^2 + 124/3\right)}$
++  $\phantom{f_{Y|X}(y,x)}=\frac{3\left(x^2+y^2\right)}{12x^2+124}$
+::::
+
+::::::
+:::::: {.column}
+
+:::: {.nobullet .incremental}
++  $P(Y<4|X=4)=\int_{1}^{4} f_{Y|X}(y|4)\ dydx$
++  $\phantom{P(Y<4|X=4)}=\int_{1}^{4}\frac{3\left(16+y^2\right)}{12\cdot16+124}\ dy$
++  $\phantom{P(Y<4|X=4)}=\frac{48(4-1)+(4^3 - 1)}{316}$
++  $\phantom{P(Y<4|X=4)}=\frac{207}{316}$
+::::
+
+::::::
+:::::::
+
+## {}
+
+::::: {.columns}
+::: {.text-center .column width="70%"}
+
+$$f\left(x,y\right)=\begin{cases}
+K\left(x^2+y^2\right) & 1 \le x \le 5, \\
+& \quad 1 \le y \le 5 \\ 
+0 & \text{otherwise.}\end{cases}$$
+
+:::
+::: {.text-center .column width="20%"}
+`r fontawesome::fa("bicycle", height = "1em")`  
+`r fontawesome::fa("bicycle", height = "2em")`  
+`r fontawesome::fa("bicycle", height = "3em")`
+:::
+::::
+
+What is $\int_{\infty}^\infty f_{Y|X}(y|x)\ dy$ for some $x \in[1,5]$?
+
+
+:::::::: {.columns}
+::::::: {.column}
+
+$f_{Y|X}(y|x)=\frac{3\left(x^2+y^2\right)}{12x^2+124}$
+
+:::: {.nobullet}
++  $\phantom{=}\int_{\infty}^\infty f_{Y|X}(y|x)\ dy$
++  $=\int_1^5 \frac{3\left(x^2+y^2\right)}{12x^2+124}\ dy$
++  $=\frac{3x^2(5-1) + \left(5^3 - 1\right)}{12x^2+124}$
++  $=\frac{12x^2 + 124}{12x^2+124}=1$
+::::
+:::::::
+::::::: {.column}
+
+::::: {.fragment .note}
+Recall $\int_{\infty}^\infty f_{Y|X}(y|x)\ dy=P(\infty < Y < \infty | X = x)$. Regardless of the condition of $X$, the probability of $Y$ over the whole sample space equals to $1$.
+:::::
+:::::::
+::::::::
+
+## Example: Checking one tire at a time 
+
+::::::: {.columns}
+:::::: {.column}
+
+Now suppose wheels are taken off the bike and you randomly choose one of the tires to check its pressure. What is the expected pressure of the selected tire?
+
+::::::
+:::::: {.column}
+::::::
+:::::::
+::::::: {.columns}
+:::::: {.column}
+
+Let $W=0$ if you select the front tire, $W=1$ if you select the rear tire, and $V$ be the pressure measurement of the selected tire.
+
+::::::
+:::::: {.column}
+
+::::::
+:::::::
+
+
+## Example: Checking one tire at a time 
+
+::::::: {.columns}
+:::::: {.column .light-text}
+
+[Now suppose wheels are taken off the bike and you randomly choose one of the tires to check its pressure. What is the expected pressure of the selected tire?]{.light-text} 
+
+::::::
+:::::::
+::::::: {.columns}
+:::::: {.column}
+
+[Let $W=0$ if you select the front tire, $W=1$ if you select the rear tire,]{.black-text} [and $V$ be the pressure measurement of the selected tire.]{.light-text}
+
+::::::
+:::::: {.column  .black-text}
+
+$$W \sim \text{Ber}\left(\frac{1}{2}\right)$$
+
+::::::
+:::::::
+
+## Example: Checking one tire at a time 
+
+::::::: {.columns}
+:::::: {.column .light-text}
+
+Now suppose wheels are taken off the bike and you randomly choose one of the tires to check its pressure. [What is the expected pressure of the selected tire?]{.black-text}
+
+::::::
+:::::: {.column}
+
+::::::
+:::::::
+::::::: {.columns}
+:::::: {.column .light-text}
+
+Let $W=0$ if you select the front tire, $W=1$ if you select the rear tire, and [$V$ be the pressure measurement of the selected tire.]{.black-text}
+
+::::::
+:::::: {.column .black-text .text-center}
+
+We are interested in $E[V]$.
+
+
+::::::
+:::::::
+
+
+## Example: Checking one tire at a time 
+
+:::::::: {.columns}
+::::::: {.column width="30%"}
+
+$$E[V]=\int_{-\infty}^\infty v f_V(v)\ dv$$
+
+::: {.fragment}
+$$f_V(v)=\frac{d}{dv}F_V(v)$$
+:::
+
+:::::::
+::::::: {.column width="70%"}
+
+:::: {.nobullet .incremental}
+
++  $F_V(v)=P(V\le v|W=0)p_W(0)$ $\phantom{F_V(v)=}+ P(V\le v|W=1)p_W(1)$
++  $\phantom{F_V(v)}=F_X(v)\frac{1}{2}+F_Y(v)\frac{1}{2}$
+
+::::
+
+:::: {.fragment}
+::: {.note}
+$F_X(v)=F_Y(v)$ due to symmetry of $f$.
+:::
+::: {.nobullet}
++  $\phantom{F_V(v)}=F_X(v)$
+:::
+::::
+
+::: {.fragment .nobullet}
++  $f_V(v)=f_X(v)$
+:::
+
+:::::::
+::::::::
+
+## Example: Checking one tire at a time 
+
+$f_V(v)=\begin{cases}
+\frac{3}{248}v^2 + \frac{1}{8} & v\in[1,5]\\
+0 & \text{otherwise}
+\end{cases}$
+
+:::::::: {.columns}
+::::::: {.column}
+::::: {.nobullet .incremental}
+
++  $E[V]=\int_1^5 v\left(\frac{3}{248}v^2 + \frac{1}{8}\right)\ dv$
++  $\phantom{E[V]} = \int_1^5\frac{3}{248}v^3 + \frac{1}{8}v\ dv$
++  $\phantom{E[V]} = \frac{3}{4\cdot 248}\left(5^4-1\right) + \frac{1}{16}\left(5^2-1\right)$
++  $\phantom{E[V]}=\frac{105}{31}$
+
+:::::
+:::::::
+::::::: {.column}
+:::: {.fragment .note}
+$f_V$ and $f_X$ are identical. This implies that $V$ and $X$ follow the same distribution.
+::::
+:::: {.fragment .note}
+When the front and rear pressures follow the same distribution, it doesn't matter how you select the wheel.
+::::
+
+:::::::
+::::::::
+
+
+# Example: Coffee and muffin {.half-title}
+
+:::: {.column width="45%" .text-center}
+
+`r fontawesome::fa("mug-hot", height = "1em")`
+`r fontawesome::fa("bread-slice", height = "1em", fill = "orange")`
+`r fontawesome::fa("mug-hot", height = "2em")`
+`r fontawesome::fa("mug-hot", height = "4em")`
+`r fontawesome::fa("bread-slice", height = "4em", fill = "orange")`
+
+::::
+
+:::::::: {.full-height .right}
+
+<br />
+
+Suppose each customer at Michael's coffee shop
+buys a muffin with a probability of $1/7$
+independent of others.
+
+What is the probability that the $10$th customer
+buys the second muffin on a day?
+
+::::::::
+
+## {}
+
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("bread-slice", fill = "orange")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("bread-slice", fill = "orange")`
+
+:::::::: {.columns .black-text}
+::::::: {.column}
+
+Suppose each customer at Michael's coffee shop
+buys a muffin with a probability of $1/7$
+independent of others.
+
+:::::::
+::::::: {.column}
+
+Let $N_1$ be the number of customers until Michael sells the first muffin and $N_2$ be the number of the customers until the secon muffin thereafter.
+
+
+\begin{align*}N_1\sim \text{Geom}\left(\frac{1}{7}\right)&&
+N_2\sim \text{Geom}\left(\frac{1}{7}\right)\end{align*}
+
+
+:::::::
+::::::::
+
+:::::::: {.columns .light-text}
+::::::: {.column}
+
+What is the probability that the $10$th customer
+buys the second muffin on a day?
+
+:::::::
+::::::: {.column}
+
+
+:::::::
+::::::::
+
+## {}
+
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("bread-slice", fill = "orange")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("bread-slice", fill = "orange")`
+
+:::::::: {.columns .light-text}
+::::::: {.column}
+
+Suppose each customer at Michael's coffee shop
+buys a muffin with a probability of $1/7$
+independent of others.
+
+:::::::
+::::::: {.column}
+
+Let $N_1$ be the number of customers until Michael sells the first muffin and $N_2$ be the number of the customers until the secon muffin thereafter.
+
+\begin{align*}N_1\sim \text{Geom}\left(\frac{1}{7}\right)&&
+N_2\sim \text{Geom}\left(\frac{1}{7}\right)\end{align*}
+
+:::::::
+::::::::
+
+:::::::: {.columns .black-text}
+::::::: {.column}
+
+What is the probability that the $10$th customer
+buys the second muffin on a day?
+
+:::::::
+::::::: {.column}
+
+We are interested in $P(N_1 + N_2 = 10)$.
+
+:::::::
+::::::::
+
+
+## {}
+
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("bread-slice", fill = "orange")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("bread-slice", fill = "orange")`
+
+::::::: {.columns}
+:::::: {.column}
+
+$$N_1\sim \text{Geom}\left(\frac{1}{7}\right)$$
+$$N_2\sim \text{Geom}\left(\frac{1}{7}\right)$$
+
+$$P(N_1 + N_2 = 10)$$
+
+::::::
+:::::: {.column .fragment}
+
+$N_1+N_2=10$ when ...
+
+::::: {.nobullet}
++  $\{N_1=1\}\cap \{N_2=9\}$
++  $\{N_1=2\}\cap \{N_2=8\}$
++  $\vdots$
++  $\{N_1=n_1\}\cap \{N_2=10-n_1\}$
++  that are mutually exclusive events.
+:::::
+
+::::: {.fragment}
+
+We can compute the probability as
+
+$$\sum_{n_1=1}^9 p_{N_1}\left(n_1\right)p_{N_2}\left(10-n_1\right)$$
+
+:::::
+::::::
+:::::::
+
+## Sum of independent discrete random variables {.half-title .center}
+
+::::: {.column width="45%"}
+:::: {.fragment .note}
+When they are not independent, you can use the joint distribution of $(X,Y)$.
+::::
+:::::
+
+::::::: {.full-height .right}
+::: {.definition}
+
+Let $X$ and $Y$ be two independent discrete random variables, with probability mass function $p_X$ and $p_Y$. Then, the probability mass function $p_Z$ of $Z=X+Y$ satisfies
+
+$$p_Z(c)=\sum_{i}p_X\left(c-b_i\right)\cdot p_Y\left(b_i\right),$$
+
+where the sum runs over all possible values $b_i$ of $Y$.
+
+:::
+:::::::
+
+## Example: Coffee and muffin 
+
+::::::: {.columns}
+:::::: {.column width="60%"}
+
+$$P(N_1 + N_2 = 10)$$
+
+:::: {.nobullet .incremental}
++  $=\sum_{n_1=1}^{9}\color{forestgreen}{p_{N_1}(n_1)}\color{darkorchid}{p_{N_2}(10-n_1)}$
++  $=\sum_{n_1=1}^{9}\color{forestgreen}{\left(\frac{6}{7}\right)^{n_1-1}\left(\frac{1}{7}\right)}\color{darkorchid}{\left(\frac{6}{7}\right)^{10-n_1-1}\left(\frac{1}{7}\right)}$
++  $=\sum_{n_1=1}^9 \left(\frac{6}{7}\right)^{8}\left(\frac{1}{7}\right)^{2}$
++  $=9 \left(\frac{6}{7}\right)^{8}\left(\frac{1}{7}\right)^{2}$
+::::
+::::::
+:::::: {.column width="40%"}
+
+::::: {.fragment .note}
+The sum of $r$ independent and identically distributed $\text{Geom}(\theta)$ random variables is a random variable with pmf $p$,
+
+$$p(x)=\binom{x-1}{r-1}\left(1-\theta\right)^{x-r}\theta^r$$
+:::::
+
+::::: {.fragment .note}
+The pmf describes the $x$ independent and identical Bernoulli trials with $r-1$ _events_ and $x-2$ non-events before the _last event_ ($r$th).
+:::::
+
+::::::
+:::::::
+
+## Example: Sum of independent binomial random variables
+
+:::::: {.columns}
+::::: {.column}
+
+Suppose $X$ and $Y$ are independent random variables where
+
+$$X\sim \text{Bin}\left(n_1, \theta\right)$$
+
+and
+
+$$Y\sim\text{Bin}\left(n_2, \theta\right).$$
+
+Let $Z=X+Y$. What is the distribution of $Z$?
+
+::::: 
+::::: {.column}
+
+```{r}
+#| ncol: 1
+#| fig-asp: .75
+binom_sum <- data.frame(x = 0:20) |>
+  mutate(
+    d1 = dbinom(x, 10, 1/3),
+    d2 = dbinom(x, 15, 1/3),
+    d3 = dbinom(x, 25, 1/3)
+  )
+ptmp <- ggplot(binom_sum, aes(x = x)) +
+  theme_classic() +
+  scale_x_continuous(breaks = c(0)) +
+  scale_y_continuous(breaks = c(0, .2), limits = c(0, .3)) +
+  labs(x = NULL, y = NULL) +
+  theme_sizes 
+ptmp + 
+  geom_col(aes(y = d1), fill = palette()[5], alpha = .3) +
+  geom_col(aes(y = d2), fill = palette()[3], alpha = .3) +
+  annotate("text", x = 2, y = .25, label = "p[X]", color = palette()[5],
+           parse = TRUE, hjust = 1, vjust = 1, size = 12) +
+  annotate("text", x = 6, y = .2, label = "p[Y]", color = palette()[3],
+           parse = TRUE, hjust = 0, vjust = 1, size = 12)
+```
+
+:::::
+:::::: 
+
+## Example: Sum of independent binomial random variables
+
+:::::: {.columns}
+::::: {.column}
+
+Since $X$ and $Y$ are sum of $n_1$ and $n_2$ independent $\text{Ber}(\theta)$ random variables,
+
+$$Z\sim\text{Binom}(n_1+n_2, \theta)$$
+
+:::: {.fragment .note}
+The center of the __distribution__ shifts as a result of the addition, $E[Z]=E[X]+E[Y]$.
+::::
+
+:::: {.fragment .note}
+The variability increases after merging two distributions into one,  $\text{Var}[Z]=\text{Var}(X)+\text{Var}(Y)$.
+::::
+
+:::: {.fragment .note}
+Note that $p_Z \neq p_X + p_Y$. Transformation of random variables
+affect their pmfs/pdf/cdfs based on the underlying distributions.
+::::
+
+::::: 
+::::: {.column}
+
+```{r}
+#| ncol: 1
+#| fig-asp: .75
+ptmp + 
+  geom_col(aes(y = d1), fill = palette()[5], alpha = .3) +
+  geom_col(aes(y = d2), fill = palette()[3], alpha = .3) +
+  annotate("text", x = 2, y = .25, label = "p[X]", color = palette()[5],
+           parse = TRUE, hjust = 1, vjust = 1, size = 12) +
+  annotate("text", x = 6, y = .2, label = "p[Y]", color = palette()[3],
+           parse = TRUE, hjust = 0, vjust = 1, size = 12) +
+  geom_col(aes(y = d3), alpha = .3) +
+  annotate("text", x = 12, y = .15, label = "p[Z]", 
+           parse = TRUE, hjust = 1, vjust = 1, size = 12)
+```
+
+:::::
+:::::: 
+
+
+## Example: Sum of independent uniform random variables {.half-title .center}
+
+::::: {.column width="45%"}
+
+(Section 11.2, Dekking et al.)
+
+
+Consider $W=U+V$ where $U$ and $V$ are two independent $U(0,1)$ random variables. 
+
+What is $F_W(a)$?
+
+ 
+:::::
+
+::::: {.full-height .right .fragment}
+
+<br />
+
+Let's first consider the joint probability density function, $f_{U,V}$.
+
+:::: {.fragment}
+::: {.note}
+$U$ and $V$ are indepdendent,
+:::
+::: {.nobullet}
++  $f_{U,V}(u,v)=f_U(u)f_V(v)$
+:::
+:::: 
+
+:::: {.fragment}
+::: {.note}
+$U$ and $V$ are $U(0,1)$ and when $u\in[0,1]$ and $v\in[0,1]$
+:::
+::: {.nobullet}
++  $\phantom{f_{U,V}(u,v)}=1$  
+:::
+::::
+:::::
+
+
+```{r}
+#| fig-align: center
+sum_unif_1 <- ggplot() +
+  theme_void() +
+  scale_x_continuous(limits = c(-0.05, 1.05), breaks = c(0, 1)) +
+  scale_y_continuous(limits = c(-0.05, 1.05), breaks = c(0, 1)) +
+  annotate("text", x = .5, y = .5, label = "u + v = a",
+           hjust = 0.1, vjust = 1.2, size = 10) +
+  annotate("text", x = c(0, 0.75), y = c(0.75, 0), label = "a", 
+           size = 10, hjust = -.1, vjust = -.1) +
+  annotate("polygon", x = c(0, 0.75, 0), y = c(0, 0, 0.75),
+           color = NA, fill = "lightgrey", alpha = 0.7) +
+  labs(x = "U", y = "V") +
+  geom_abline(intercept = .75, slope = -1) +
+  geom_hline(yintercept = c(0, 1), linetype = c("solid", "dotted")) +
+  geom_vline(xintercept = c(0, 1), linetype = c("solid", "dotted")) +
+  coord_equal() +
+  theme_sizes
+sum_unif_2 <- ggplot() +
+  theme_void() +
+  scale_x_continuous(limits = c(-0.05, 1.05), breaks = c(0, 1)) +
+  scale_y_continuous(limits = c(-0.05, 1.05), breaks = c(0, 1)) +
+  annotate("text", x = .75, y = 0.75, label = "u + v = a",
+           hjust = 0.3, vjust = 0, size = 10) +
+  annotate("polygon", x = c(0, 1, 1, 0.25, 0), y = c(0, 0, .25, 1, 1), 
+           color = NA, fill = "lightgrey", alpha = 0.7) +
+  annotate("text", x = c(.25, 1), y = c(1, .25), label = "a-1", 
+           color = c("black", "white"),
+           size = 10, hjust = c(-.1, 1.1), vjust = c(-.1, 1.1)) +
+  geom_abline(intercept = 1.25, slope = -1) +
+  geom_hline(yintercept = c(0, 1), linetype = c("solid", "dotted")) +
+  geom_vline(xintercept = c(0, 1), linetype = c("solid", "dotted")) +
+  labs(x = "U", y = "V") +
+  coord_equal() +
+  theme_sizes
+```
+
+## {}
+
+:::: {.note}
+There are 2 cases to consider, $a\in[0,1)$ and $a\in[1,2]$. The area represents the cumulative distribution function since the joint pdf is $1$.
+::::
+
+:::::: {.columns}
+::::: {.column width="60%"}
+
+
+:::: {.fragment}
+$$0\le a<1$$
+
+::: {.nobullet}
++  $F_W(a)=\int_0^a\int_0^{a-u} 1 dudv$
++  $\phantom{F_W(a)}=\frac{a^2}{2}$
+:::
+::::
+:::::
+::::: {.column width="40%"}
+
+```{r}
+#| layout-ncol: 1
+#| fig-asp: .6
+sum_unif_1
+sum_unif_2
+```
+
+:::::
+::::::
+
+## {}
+
+:::: {.note}
+There are 2 cases to consider, $a\in[0,1)$ and $a\in[1,2]$. The area represents the cumulative distribution function since the joint pdf is $1$.
+::::
+
+:::::: {.columns}
+::::: {.column width="60%"}
+
+:::: {.light-text}
+$$0\le a<1$$
+
+::: {.nobullet}
++  $F_W(a)=\frac{a^2}{2}$
+:::
+::::
+
+$$1\le a<2$$
+
+::: {.nobullet}
++  $F_W(a)=\int_0^{a-1}\int_0^1 1 dudv + \int_{a-1}^1\int_0^{a-u} 1 dudv$
++  $\phantom{F_W(a)}=1 - \frac{(2-a)^2}{2}$
+:::
+:::::
+::::: {.column width="40%"}
+
+```{r}
+#| layout-ncol: 1
+#| fig-asp: .6
+sum_unif_1
+sum_unif_2
+```
+
+:::::
+::::::
+
+## {}
+
+:::: {.note}
+There are 2 cases to consider, $a\in[0,1)$ and $a\in[1,2]$. The area represents the cumulative distribution function since the joint pdf is $1$.
+::::
+
+:::::: {.columns}
+::::: {.column width="60%"}
+
+$$F_W(a)=\begin{cases}
+0 & a<0 \\
+\frac{a^2}{2} & 0 \le a < 1 \\
+1 - \frac{(2-a)^2}{2} & 1\le a <2\\
+1 & a\ge2
+\end{cases}$$
+
+
+
+:::::
+::::: {.column width="40%"}
+
+```{r}
+#| layout-ncol: 1
+#| fig-asp: .6
+sum_unif_1
+sum_unif_2 
+```
+
+:::::
+::::::
+
+## {}
+
+
+
+:::::: {.columns}
+::::: {.column width="50%"}
+
+:::: {.note}
+For any fixed value $w$, the probability density function of $W$ is the joint probability density function of $(U,V)$ at points $(u,v)$ on the line of $w=u+v$.
+::::
+
+
+$$f_W(w)=\int_{-\infty}^\infty f_V(w-u)f_U(u) du$$
+
+
+:::::
+::::: {.column width="50%"}
+
+```{r}
+#| layout-ncol: 1
+#| fig-asp: 1
+ggplot() +
+  theme_void() +
+  scale_x_continuous(limits = c(-0.05, 1.05), breaks = c(0, .5, 1),
+                     labels = c(0, "u", 1)) +
+  scale_y_continuous(limits = c(-0.05, 1.05), breaks = c(0, .25, 1),
+                     labels = c(0, "v", 1)) +
+  annotate("text", x = .5, y = .25, parse = TRUE,
+           label = "f[V](a-u)~f[U](u)", color = palette()[5],
+           hjust = -.1, vjust = -.1, size = 10) +
+  annotate("text", x = c(0, 0.75), y = c(0.75, 0), label = "a", 
+           size = 10, hjust = -.1, vjust = -.1) +
+  labs(x = "U", y = "V") +
+  geom_abline(intercept = .75, slope = -1) +
+  geom_hline(yintercept = c(0, 1), linetype = c("solid", "dotted")) +
+  geom_vline(xintercept = c(0, 1), linetype = c("solid", "dotted")) +
+  annotate("point", x = .5, y = .25, size = 7, color = palette()[5]) +
+  annotate("segment", x = c(.5, .5, 0), xend = c(.5, 0, .75),
+           y = c(0, .25, .75), yend = c(.25, .25, 0),
+           color = palette()[5], linewidth = 2, 
+           linetype = c("dotted", "dotted", "solid")) +
+  coord_equal() +
+  theme_sizes
+```
+
+:::::
+::::::
+
+## Sum of independent continuous random variables {.half-title .center}
+
+::::: {.column width="45%"}
+:::: {.note}
+When they are not independent, you can use the joint distribution of $(X,Y)$.
+::::
+:::::
+
+::::::: {.full-height .right}
+::: {.definition}
+
+Let $X$ and $Y$ be two independent continuous random variables, with probability density functions $f_X$ and $f_Y$, respectively. Then, the probability density function $f_Z$ of $Z=X+Y$ is given by
+
+$$f_Z(z)=\int_{-\infty}^\infty f_X\left(z-y\right)f_Y\left(y\right)dy$$
+
+for $-\infty < z < \infty$.
+
+:::
+:::::::
+
+## Example: Single-server queue
+
+Suppose time until the first customer's arrival from the opening hour at Michael's cafe is $T_1$ and the time between the arrival of $(i-1)$th and $i$th customer for $i=2,3,4$,... The intervals between customer arrivals are independent and follows $\text{Exp}(\lambda)$. What is the distribution of $Z_2=T_1+T_2$?
+
+```{r}
+#| fig-asp: .1
+#| fig-align: center
+ggplot() +
+  theme_void() +
+  scale_x_continuous(limits = c(0, 10), expand = expansion(add = .17)) +
+  geom_hline(yintercept = 0, linetype = "dotted") +
+  annotate("point", x = c(4, 7), y = 0, shape = 4, size = 12) +
+  annotate("point", x = 0, y = 0, shape = 16, size = 10) +
+  annotate("text", x = c(2, 5.5, 8), y = 0,
+           label = c("T[1]", "T[2]", "T[3]"),
+           parse = TRUE, hjust = .5, vjust = -.1, size = 8)
+  
+```
+
+
+:::::::: {.columns}
+::::::: {.column width="60%"}
+::: {.incremental .nobullet}
+
++ $f_Z(z)=\int_{-\infty}^\infty f_{T_1}(z-y)f_{T_2}(y)dy$
++ $\phantom{f_Z(z)} = \int_0^z \lambda e^{-\lambda (z-y)} \cdot \lambda e^{-\lambda y} dy$
++ $\phantom{f_Z(z)} = \lambda^2e^{-\lambda z}\int_0^z dy =\lambda ^2 z e^{-\lambda z},$ $\quad z>0$
+
+:::
+
+::: {.fragment}
+$$Z_2 \sim \text{Gamma}(2, \lambda)$$
+:::
+:::::::
+::::::: {.column width="40%"}
+
+:::: {.fragment .note}
+In general, sum of $n$ independent $\text{Exp}(\lambda)$ variables follows
+
+$$\text{Gamma}(n, \lambda)$$
+::::
+
+:::::::
+::::::::
+
+# Example: Compounding errors {.half-title .center}
+
+:::::: {.column width="45%" .text-center}
+
+`r fontawesome::fa("scale-unbalanced", height = "6em")`
+
+::::::
+
+:::::::::: {.full-height .right}
+
+<br />
+
+For each cup of coffee, Michael measures 15 g of coffee beans. Suppose his scale stops working and he fills up a small cup which measures approximately 15 g of coffee beans. 
+
+Suppose each time Michael fills up the cup with coffee beans, it measures $W_i$ grams of beans where
+
+$$W_i\sim N\left(15, 3^2\right)$$
+for $i=1,2,...$ independently.
+
+Michael is interested in amount of error after 9 cups.
+
+::::::::::
+
+
+## {}
+
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("scale-unbalanced")`
+
+Let $D_{(9)}=\sum_{i=1}^{9}\left(W_i-15\right)$ to represent the cumulative error after 9 cups.
+
+:::::::: {.columns}
+::::::: {.column}
+
+:::::: {.nobullet .incremental}
++  $E[D_{(9)}]=E\left[\sum_{i=1}^{9}\left(W_i-15\right)\right]$
++  $\phantom{E[D]}=\sum_{i=1}^{9}\left[E\left(W_i\right)-15\right]$
+::::::
+
+:::::::
+::::::: {.column}
+
+:::::: {.nobullet .incremental}
++  $\text{Var}(D_{(9)})=\text{Var}\left[\sum_{i=1}^{9}\left(W_i-15\right)\right]$
++  $\phantom{\text{Var}[D]}=\sum_{i=1}^{9}\text{Var}\left(W_i\right)$
+::::::
+
+
+:::::::
+::::::::
+
+
+## Parameters of a normal distribution {.center .half-title}
+
+:::::: {.full-height .right}
+::::: {.definition}
+
+If $X$ follows the normal distribution with parameters $\mu$ and $\sigma^2$,
+that is,
+$X\sim N\left((\mu, \sigma^2\right)$
+
+then $$E[X]=\mu$$
+and $$\text{Var}(X)=\sigma^2.$$
+
+:::::
+::::::
+
+
+## {}
+
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("scale-unbalanced")`
+
+Let $D_{(9)}=\sum_{i=1}^{9}\left(W_i-15\right)$ to represent the cumulative error after 9 cups.
+
+:::::::: {.columns}
+::::::: {.column}
+
+:::::: {.nobullet}
++  $E[D_{(9)}]=E\left[\sum_{i=1}^{9}\left(W_i-15\right)\right]$
++  $\phantom{E[D]}=\sum_{i=1}^{9}\left[E\left(W_i\right)-15\right]$
++  $\phantom{E[D]}=\sum_{i=1}^{9}\left(15 - 15\right)$
++  $\phantom{E[D]}=0$
+::::::
+
+:::::::
+::::::: {.column}
+
+:::::: {.nobullet}
++  $\text{Var}(D_{(9)})=\text{Var}\left[\sum_{i=1}^{9}\left(W_i-15\right)\right]$
++  $\phantom{\text{Var}[D]}=\sum_{i=1}^{9}\text{Var}\left(W_i\right)$
++  $\phantom{\text{Var}[D]}=\sum_{i=1}^{9}9$
++  $\phantom{\text{Var}[D]}=9^2$
+::::::
+
+::: {.fragment .note}
+We need the probability density function to understand the full distribution.
+:::
+
+:::::::
+::::::::
+
+
+## Sum of two independent standard normal random variables {.half-title}
+
+::::: {.column width="45%"}
+
+Consider $Y = Z_1 +Z_2$ where $Z_1$ and $Z_2$ are independent standard normal random variables.
+
+:::::
+
+:::::: {.full-height .right}
+
+<br />
+
+:::: {.nobullet .incremental}
++  $f_Y(y) = \int_{-\infty}^\infty f_{Z_1}(y-x)f_{Z_2}(x)\ dx$
++  $\phantom{f_Y(y)}=\int_{-\infty}^\infty \frac{1}{\sqrt{2\pi}}e^{-(y-x)^2/2} \cdot\frac{1}{\sqrt{2\pi}}e^{-x^2/2}\ dx$
++  $\phantom{f_Y(y)} = \frac{1}{\sqrt{2\pi}}\int_{-\infty}^\infty\frac{1}{\sqrt{2\pi}}e^{-\left(y^2-2xy+2x^2\right)/2}\ dx$
+::::
+:::: {.fragment}
+::: {.note}
+See pg. 158 to 159, Dekking et al. for details. The steps involve changing integration variables.
+:::
+::: {.nobullet}
++  $\phantom{f_Y(y)=}\vdots$
+:::
+::::
+:::: {.nobullet .incremental}
++  $\phantom{f_Y(y)}=\frac{1}{\sqrt{4\pi}}e^{-y^2/4}\int_{-\infty}^\infty \frac{1}{\sqrt{2\pi}} e^{-u^2/2}\ du$
++  $\phantom{f_Y(y)}=\frac{1}{\sqrt{4\pi}}e^{-y^2/4}=\phi(y/2)$
+::::
+
+:::: {.fragment .note}
+Sum of independent normal random variables is another normal random variable.
+::::
+::::::
+
+
+## Example: Compounding errors 
+
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("mug-hot")`
+`r fontawesome::fa("scale-unbalanced")`
+
+:::::::: {.columns}
+::::::: {.column width="30%"}
+
+:::::: {.nobullet}
++  $E[D_{(9)}]=0$
++  $\text{Var}(D_{(9)})=9^2$
++  $D_{(9)}\sim N$
+::::::
+
+::: {.fragment}
+$$D_{(9)}\sim N\left(0, 9^2\right)$$
+:::
+
+:::::::
+::::::: {.column width="70%" .fragment}
+
+```{r}
+ggplot() +
+  theme_minimal() +
+  theme_sizes +
+  scale_x_continuous(limits = c(-15, 15), breaks = c(-5, 0, 5)) +
+  labs(x = NULL, y = "Probability density") +
+  geom_function(fun = dnorm, args = list(mean = 0, sd = 3),
+                color = grey(.8)) +
+  geom_function(fun = dnorm, args = list(mean = 0, sd = 3 * 3),
+                color = grey(.4)) +
+  geom_function(fun = dnorm, args = list(mean = 0, sd = 3 * 6),
+                color = grey(.2)) +
+  geom_function(fun = dnorm, args = list(mean = 0, sd = 3 * 9),
+                color = grey(0)) +
+  annotate("text", parse = TRUE, color = grey(c(.8, .4, .2, 0)),
+           x = 0, y = dnorm(0, sd = c(1, 3, 6, 9) * 3), size = 8,
+           label = c("D[(1)]", "D[(3)]", "D[(6)]", "D[(9)]"),
+           hjust = .5, vjust = c(1.3, -.3, -.3, 1.3)) +
+  theme(axis.text.y = element_blank())
+```
+
+
+:::::::
+::::::::
+
+## Linear combination of normal random variables {.half-title .center}
+
+::::: {.column width="45%"}
+:::: {.note .fragment}
+Adding positively/negatively correlated random variables lead to higher/lower variability.
+::::
+:::: {.note .fragment}
+Not all random variables remain in the same distribution family when combined linearly
+::::
+:::::
+
+:::::::: {.full-height .right}
+::: {.definition}
+Let $X$ and $Y$ be two normal random variables with means $\mu_1$ and $\mu_2$, and variances $\sigma_1^2$ and $\sigma_2^2$, respectively. Then, $Z=X+Y$ also follows a normal distribution.
+
+When $X$ and $Y$ are independent, 
+
+$$Z\sim N\left(\mu_1 + \mu_2, \sigma'^2\right)$$
+where $\sigma'^2=\sigma_1^2 + \sigma_2^2$.
+
+When $X$ and $Y$ are dependent,
+
+$$Z\sim N\left(\mu_1 + \mu_2,\sigma'^2+2\text{Cov}(X,Y)\right).$$ 
+
+:::
+::::::::
+
+## Example: Mean of $n$ normal random variables
+
+::::::::: {.columns}
+:::::::: {.column}
+
+Suppose $X_1$, $X_2$, ... $X_n$ are independent and identically distributed $N\left(\mu, \sigma^2\right)$ random variables. What is the distribution of their average?
+
+$$\overline{X}=\frac{1}{n}\sum_{i=1}^n X_i$$
+
+::::::::
+:::::::: {.column}
+
+:::::: {.incremental .nobullet}
++ $X_1+X_2$ is normal. $(X_1+X_2) +X_3$ is normal, ... $\overline{X}$ is normally distributed.
++ $E\left[\overline{X}\right]=\left.\sum_{i=1}^nE\left[X_i\right]\right/n=\mu$
++ $\text{Var}\left(\overline{X}\right)=\text{Var}\left(\left.\sum_{i=1}^nX_i\right/n\right)$
++ $\phantom{\text{Var}\left(\overline{X}\right)}=\left.\text{Var}\left(\sum_{i=1}^nX_i\right)\right/n^2$
++ $\phantom{\text{Var}\left(\overline{X}\right)}=\left.\sum_{i=1}^n\text{Var}\left(X_i\right)\right/n^2$
++ $\phantom{\text{Var}\left(\overline{X}\right)}=\left.n\sigma^2\right/n^2$
++ $\phantom{\text{Var}\left(\overline{X}\right)}=\left.\sigma^2\right/n$
+::::::
+
+::::::::
+:::::::::
+
+## Example: Mean of $n$ normal random variables
+
+::::::::: {.columns}
+:::::::: {.column}
+
+Suppose $X_1$, $X_2$, ... $X_n$ are independent and identically distributed $N\left(\mu, \sigma^2\right)$ random variables. What is the distribution of their average?
+
+$$\overline{X}=\frac{1}{n}\sum_{i=1}^n X_i$$
+
+::::::::
+:::::::: {.column}
+
+:::::: {.nobullet}
++ $\overline{X}$ is normally distributed.
++ $E\left[\overline{X}\right]=\mu$
++ $\text{Var}\left(\overline{X}\right)=\left.\sigma^2\right/n$
+::::::
+
+::: {.fragment}
+$$\overline{X}\sim N\left(\mu, \frac{\sigma^2}{n}\right)$$
+:::
+
+::::::::
+:::::::::
+
+# R worksheet
+
+## Install `learnr` and run R worksheet {.half-title}
+
+:::: {.column width="45%"}
+1.   Click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main) to install `learnr` on [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+
+2.   Follow [this link](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Frlesson09&urlpath=shiny%2Frlesson09%2F&branch=main) to open the worksheet
+::::
+
+:::: {.full-height .right}
+
+<br />
+<br />
+
+If you see an error, try:
+
+::: {.note}
+1. Log in to [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2. Find `rlesson09` from _Files_ pane
+3. Click _Run Document_ 
+:::
+
+Other steps you may try:
+
+::: {.note}
+1.  Remove any `.Rmd` and `.R` files on the home directory of [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2.  In RStudio, 
+    i. Click `Tools` > `Global Options`
+    ii. Uncheck _"Restore most recently opened project at startup"_
+3.  Run `install.packages("learnr")` in RStudio after the steps above or click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main)
+:::
+
+::::
+
+
+# Summary
+
+
+:::: {.full-height .right}
+
++  The probability mass/density function of a sum of two independent random variables can be derived using the product of their marginal functions.
++  Sum of independent and identical random variables for some distributions leads to other common distributions.
++  Linear combination of normal random variables is also normally distributed.
+::::
+
+
+## Practice questions {.center}
+
+Chapter 11, [Dekking et al.](https://librarysearch.library.utoronto.ca/permalink/01UTORONTO_INST/14bjeso/alma991106910545806196)
+
++   Quick Exercises 11.1, 11.2, 11.3
++   Read "The single-server queue revisited" on page 156
++   (Optional) Read Section 11.3 on product and quotient of two random variables
++   Exercises except 11.1 to 11.7, 11.9, 11.10, 11.11
+
++   See a collection of corrections by the author [here](https://www.tudelft.nl/ewi/over-de-faculteit/afdelingen/applied-mathematics/applied-probability/education/mips)
+

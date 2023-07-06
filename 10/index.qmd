@@ -1,0 +1,1258 @@
+---
+title: "Lecture 10: Law of Large Numbers"
+subtitle: "STA237: Probability, Statistics, and Data Analysis I"
+author: "Michael Jongho Moon"
+institute: "PhD Student, DoSS, University of Toronto"
+date: "June 14, 2023"
+date-format: full
+format:
+  revealjs:
+    width: 1280
+    height: 720
+    theme: [default, ../theme.scss]
+    css: "style.css"
+    chalkboard: true
+    footer: |
+      &copy; 2023. Michael J. Moon. University of Toronto. 
+      
+      Sharing, posting, selling, or using this material
+      outside of your personal use in this course is
+      <strong>NOT</strong> permitted under any circumstances.
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(fontawesome)
+knitr::opts_chunk$set(eval = TRUE, echo = FALSE)
+palette(RColorBrewer::brewer.pal(8, "Accent"))
+# plot(1:5, col = 1:5, cex = 2, pch = 16)
+theme_sizes <- theme(
+    plot.title = element_text(size = 32),
+    plot.subtitle = element_text(size = 24),
+    axis.text = element_text(size = 20),
+    axis.title = element_text(size = 24, margin = margin(1, 1, 1, 1, unit = "lines")),
+    axis.title.y = element_text(angle = 90),
+    legend.text = element_text(size = 20)
+  )
+```
+
+
+# Example: Canadian Student Tobacco, Alcohol and Drugs Survey {.half-title .center}
+
+:::::::: {.full-height .right}
+
+_From Government of Canada page, [Summary of results for the Canadaian Student Tobacco, Alcohol and Drugs Survey 2021-22](https://www.canada.ca/en/health-canada/services/canadian-student-tobacco-alcohol-drugs-survey/2021-2022-summary.html)_
+
+> A total sample of $61\ 096$ students in grades 7 to 12 (secondary I through V in Quebec) completed the survey ... The weighted results represents over 2 million 
+Canadian students...
+
+> [In 2021-22], 2% of students in grade 7 to 12 ($43\ 000$) reported current cigarette smoking ...
+
+::::::::
+
+## Example: CSTAD
+
+```{r}
+set.seed(237)
+n <- 25
+x <- rep(1:n, n)
+y <- rep(1:n, each = n)
+z <- rbinom(n^2, 1, 0.03)
+pop <- tibble(x = x, y = y, z = z) |>
+  mutate(sampled = sample(c(rep(TRUE, 100), rep(FALSE, n^2 - 100))))
+p0 <- mean(pop$z)
+p_pop <- ggplot(pop) +
+  theme_void() +
+  ggforce::geom_circle(
+    aes(x0 = x, y0 = y, r = .4, fill = factor(z)), 
+    color = "white", show.legend = FALSE
+  ) +
+  scale_fill_manual(values = c("lightgrey", palette()[3])) +
+  coord_equal()
+p_samp <- ggplot(pop) +
+  theme_void() +
+  ggforce::geom_circle(
+    aes(x0 = x, y0 = y, r = .5), 
+    fill = palette()[5], color = palette()[5],
+    data = pop |> filter(sampled)
+  ) +
+  ggforce::geom_circle(
+    aes(x0 = x, y0 = y, r = .4, fill = factor(z), alpha = sampled),
+    color = NA, show.legend = FALSE
+  ) +
+  scale_fill_manual(values = c("lightgrey", palette()[3])) +
+  scale_alpha_manual(values = c(0.3, 1)) +
+  coord_equal()
+```
+
+::::::: {.columns}
+:::::: {.column width="60%"}
+
+For simplicity, assume that
+
+:::: {.nobullet}
++  there are $2$ million Canadian students of which a proportion of $\theta$ are [smokers]{.accent-three}; and
+:::: 
+
+$$\theta = \frac{\text{Number of smokers}}{\text{Number of all Canadian students}}$$
+
+::::::
+:::::: {.column width="40%"}
+
+```{r}
+#| fig-asp: 1
+p_pop
+```
+
+::::::
+:::::::
+
+## Example: CSTAD
+
+::::::: {.columns}
+:::::: {.column width="60%"}
+
+For simplicity, assume that
+
+:::: {.nobullet}
++  there are $2$ million Canadian students of which a proportion of $\theta$ are [smokers]{.accent-three}; and
++  the survey randomly selects $50\ 000$ [participants]{.accent-five} with an equal probability.
+::::
+
+:::: {.fragment}
+While $\theta$ is unknown, we use the survey to estimate the quantity based on $n=50\ 000$ survey responses.
+
+$$T_{50\ 000} = \frac{\text{Number participants who smoke}}{\text{Number of all participants}}$$
+::::
+
+
+::::::
+:::::: {.column width="40%"}
+
+```{r}
+#| fig-asp: 1
+p_samp
+```
+
+::::::
+:::::::
+
+## Populations and samples 
+
+::::::: {.columns}
+:::::: {.column}
+
+```{r}
+#| fig-asp: .5
+#| out-width: 80%
+#| fig-align: center
+p_pop + 
+  annotate("segment", x = 21, y = 10.5, xend = 30, yend = 10.5,
+           arrow = arrow(type = "closed"), linewidth = 3,
+           color = palette()[3]) +
+  annotate("text", x = 31 , y = 10.5, label = "Parameter",
+           color = palette()[3], size = 10, hjust = 0) +
+  coord_equal(xlim = c(0, 40))
+```
+
+::::: {.definition}
+
+In studying data, we call the collection of objects being studied 
+the [**population**]{.accent-three} of interest and the quantity of interest 
+the [**parameter**]{.accent-three}.
+
+:::::
+::::::
+:::::: {.column}
+
+```{r}
+#| fig-asp: .5
+#| out-width: 80%
+#| fig-align: center
+p_samp + 
+  annotate("segment", x = 21, y = 10.5, xend = 30, yend = 10.5,
+           arrow = arrow(type = "closed"), linewidth = 3,
+           color = palette()[5]) +
+  annotate("text", x = 31 , y = 10.5, label = "Estimate",
+           color = palette()[5], size = 10, hjust = 0) +
+  annotate("text", x = 25, y = 12, label = "Estimator",
+           color = palette()[5], size = 10) +
+  coord_equal(xlim = c(0, 40))
+```
+
+::::: {.definition}
+
+The subset of the objects collected in the data is the [**sample**]{.accent-five} 
+and an [**estimator**]{.accent-five} is a rule using sample that estimates 
+a parameter. The resulting value is an [**estimate**]{.accent-five} of the parameter.
+
+:::::
+::::::
+:::::::
+
+
+## Example: CSTAD
+
+::::::: {.columns}
+:::::: {.column}
+
+```{r}
+#| fig-asp: .5
+#| out-width: 80%
+#| fig-align: center
+p_pop + 
+  annotate("segment", x = 21, y = 10.5, xend = 30, yend = 10.5,
+           arrow = arrow(type = "closed"), linewidth = 3,
+           color = palette()[3]) +
+  annotate("text", x = 31 , y = 10.5, label = "Parameter",
+           color = palette()[3], size = 10, hjust = 0) +
+  coord_equal(xlim = c(0, 40))
+```
+
+::::: {.nobullet}
+
+
++  The [**population**]{.accent-three} is the $2$ million Canadian students in grades 7 to 12.
++  The [**parameter**]{.accent-three} is the proportion of smokers, $\theta$.
+
+:::::
+::::::
+:::::: {.column}
+
+```{r}
+#| fig-asp: .5
+#| out-width: 80%
+#| fig-align: center
+p_samp + 
+  annotate("segment", x = 21, y = 10.5, xend = 30, yend = 10.5,
+           arrow = arrow(type = "closed"), linewidth = 3,
+           color = palette()[5]) +
+  annotate("text", x = 31 , y = 10.5, label = "Estimate",
+           color = palette()[5], size = 10, hjust = 0) +
+  annotate("text", x = 26, y = 13, label = "Estimator",
+           color = palette()[5], size = 10, hjust = 0) +
+  coord_equal(xlim = c(0, 40))
+```
+
+::::: {.nobullet}
+
++  The [**sample**]{.accent-five} is $50\ 000$ survey participants.
++  $T_{50\ 000}$ is an [**estimator**]{.accent-five} of $\theta$.
+
+:::::
+::::::
+:::::::
+
+## Example: CSTAD
+
+```{r eval=FALSE}
+library(gganimate)
+set.seed(456)
+samp <- bind_rows(lapply(
+  1:49, function(x) sample_n(pop, 100)
+), .id = "sample_ind")
+samp <- bind_rows(
+  samp, filter(pop, sampled) |> mutate(sample_ind = "0")
+) |>
+  mutate(sample_ind = as.numeric(sample_ind))
+samp_dist <- samp |> 
+  summarise(z = mean(z), .by = sample_ind) |>
+  ungroup()
+a_samp <- samp |> 
+  ggplot() +
+  theme_void() +
+  ggforce::geom_circle(
+    aes(x0 = x, y0 = y, r = .5),
+    fill = palette()[5], color = palette()[5],
+    show.legend = FALSE
+  ) +
+  ggforce::geom_circle(
+    aes(x0 = x, y0 = y, r = .4, fill = factor(z)),
+    color = NA, show.legend = FALSE
+  ) +
+  scale_fill_manual(values = c("lightgrey", palette()[3])) +
+  coord_equal() +
+  transition_states(sample_ind, transition_length = 0)
+anim_save("img/sampling.gif", a_samp, duration = 50,
+          start_pause = 1, end_pause = 3)
+a_samp_dist <- samp_dist |>
+  ggplot() +
+  theme_void() +
+  labs(y = "Sample mean", x = NULL) +
+  geom_point(aes(sample_ind, z), color = palette()[5], size = 3,
+             shape = 21, fill = palette()[3]) +
+  annotate("segment", x = 0, xend = 50, y = p0, yend = p0,
+          linetype = "dotted", color = palette()[3], linewidth = 2) +
+  scale_y_continuous(limits = c(0, .5), breaks = c(0, p0, .5),
+                     label = expression(0, theta, .5)) +
+  theme_sizes +
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_text(size = 24)) +
+  transition_states(sample_ind, transition_length = 0) +
+  shadow_mark()
+anim_save("img/sampling-distribution.gif", a_samp_dist, duration = 50,
+          start_pause = 1, end_pause = 3)
+```
+
+
+::::::: {.columns}
+:::::: {.column width="30%"}
+
+```{r}
+#| fig-asp: 1
+#| fig-align: center
+knitr::include_graphics("img/sampling.gif")
+```
+
+::::::
+:::::: {.column width="30%"}
+
+```{r}
+#| fig-asp: 1
+#| fig-align: center
+knitr::include_graphics("img/sampling-distribution.gif")
+```
+
+::::::
+:::::: {.column width="40%"}
+
+The estimator $T_{50\ 000}$ is a random variable since the sampling process is random.
+
+::: {.fragment}
+Thus, it has a distribution.
+:::
+
+::::::
+:::::::
+
+## Statistic and sampling distribution {.half-title .center}
+
+::::: {.column width="45%"}
+:::: {.fragment .note}
+An estimator is a statistic but a statistic isn't necessarily an estimator.
+::::
+:::::
+
+:::::::: {.full-height .right}
+
+::::: {.definition}
+A **statistic** is a function of a sample and the quantity computed from the function.
+:::::
+
+::: {.definition}
+Let $T=h\left(X_1,X_2,\ldots,X_n\right)$ be a statistic based on a random sample $X_1$, $X_2$, $X_3$, \ldots, $X_n$. The probability distribution of $T$ is called the **sampling distribution** of $T$.
+:::
+
+::::::::
+
+
+## Example: CSTAD
+
+
+$$T_{50\ 000} = \frac{\text{Number participants who smoke}}{\text{Number of all participants}}$$
+
+
+
+::::::::: {.columns}
+:::::::: {.column}
+
+Let $n=50\ 000$ and  $T_{n}=\left.\sum_{i=1}^n X_i\right/n$
+where
+
+$$X_i=\begin{cases} 1 & i\text{th survey participant} \\
+& \quad\text{is a smoker}\\
+0 & \text{otherwise}\end{cases}$$
+
+::::::::
+:::::::: {.column}
+
+:::: {.incremental}
++  $T_n$ is an example of an estimator.
++  We can derive the distribution of $T_n$ based on $X_i$s.
++  Based on the distribution, we can assess whether the estimator is a _"good"_ estimator.
+::::
+::::::::
+:::::::::
+
+## Example: CSTAD
+
+::::::::: {.columns}
+:::::::: {.column}
+
+$$T_{n}=\frac{1}{n}\sum_{i=1}^n X_i$$
+
+where 
+
+$$
+X_i=\begin{cases} 1 & i\text{th survey participant} \\
+& \quad\text{is a smoker}\\
+0 & \text{otherwise}\end{cases}
+$$
+
+::::::::
+:::::::: {.column}
+
+:::: {.nobullet}
++  $E\left(T_n\right)=E\left(\overline{X}_n\right)$
+::::
+::::: {.fragment}
+:::: {.note}
+With a very large $n$, let's assume selection of each survey participant is independent and the probability of selecting a smoker remains identical.
+::::
+:::: {.nobullet}
++  $=E\left(X_1\right)$
+::::
+:::::
+::::: {.fragment}
+:::: {.note}
+The probability that a randomly selected student is a smoker is the proportion of smokers in the student population, $\theta$.
+::::
+:::: {.nobullet}
++  $=\theta$
+::::
+:::::
+
+::::::::
+:::::::::
+
+
+## Example: CSTAD
+
+::::::::: {.columns}
+:::::::: {.column}
+
+$$T_{n}=\frac{1}{n}\sum_{i=1}^n X_i$$
+
+where 
+
+$$X_i\sim\text{Ber}(\theta)$$
+for all $i\in\{1,2,\ldots,n\}$ independently.
+
+::::::::
+:::::::: {.column}
+
+:::: {.nobullet}
++  $E\left(T_n\right)=E\left(\overline{X}_n\right)=\theta$
+::::
+
+:::: {.incremental}
++  In words, the expected value of the estimator is the parameter.
++  This is a desirable trait for an estimator in general.
+::::
+::::::::
+:::::::::
+
+## Bias and unbiased estimator {.half-title .center}
+
+:::::: {.column width="45%"}
+:::: {.fragment .note}
+$T_n$ is an example of an unbiased estimator of $\theta$.
+
+A sample mean of a random sample is an unbiased estimator
+of the population mean in general.
+::::
+::::::
+
+::::::: {.full-height .right}
+::::: {.definition}
+Let $T$ be an estimator of $\theta$. The *bias* of $T$ is
+
+$$E\left[T\right]-\theta$$
+
+and we say $T$ is **unbiased** when the bias is $0$.
+:::::
+:::::::
+
+## Example: CSTAD
+
+::::::::: {.columns}
+:::::::: {.column width="70%"}
+
+How about the $\text{Var}\left(T_n\right)?$
+
+:::: {.fragment .nobullet}
++  A _good_ estimator will have a small variance which implies less variability away from the parameter.
+::::
+
+::::: {.incremental .nobullet}
++  $\text{Var}\left(T_n\right)=\text{Var}\left(\overline{X}_n\right)$
++  $\phantom{\text{Var}\left(T_n\right)}=\text{Var}\left(\frac{1}{n}\sum_{i=1}^nX_i\right)$
++  $\phantom{\text{Var}\left(T_n\right)}=\frac{1}{n^2}n\text{Var}\left(X_1\right)$
++  $\phantom{\text{Var}\left(T_n\right)}=\frac{1}{n}\text{Var}\left(X_1\right)$
+:::::
+
+::::: {.fragment}
+
+A larger sample size leads to less variability in the estimator.
+
+:::::
+::::::::
+:::::::: {.column width="30%"}
+
+:::: {.note}
+$$T_{n}=\frac{1}{n}\sum_{i=1}^n X_i$$
+
+where 
+
+$$X_i\sim\text{Ber}(\theta)$$
+for all $i\in\{1,2,\ldots,n\}$ independently.
+::::
+
+:::: {.note}
+$E[T_n]=\theta$
+::::
+::::::::
+:::::::::
+
+## Example: CSTAD {.half-title}
+
+:::: {.column width="45%"}
+::: {.incremental .nobullet}
++  As you increase the sample size $n$, the sampling distribution of $T_n$ becomes narrower and narrower around its mean, $\theta$.
++  As we take $n$ to infinity, $T_n$ will equal the constant $\theta$.
++  We say that $T_n$ converges in probability to $\theta$ .
+:::
+::::
+
+
+:::::: {.full-height .right}
+::::: {.columns}
+:::: {.column width="12%"}
+::::
+:::: {.column width="75%"}
+
+```{r}
+#| layout-ncol: 1
+dist_20 <- ggplot() +
+  theme_classic() +
+  geom_histogram(aes(x = replicate(1000, mean(sample(pop$z, 20)))),
+                 bins = 20) +
+  geom_vline(xintercept = p0, color = palette()[3], 
+             linetype = "dotted", linewidth = 2) +
+  scale_x_continuous(breaks = c(0, p0, 0.2),
+                     labels = expression(0, theta, 0.2)) +
+  coord_cartesian(xlim = c(0, 0.2), clip = "off") +
+  labs(x = NULL, y = NULL, title = expression(T[20])) +
+  theme_sizes
+dist_100 <- ggplot() +
+  theme_classic() +
+  geom_histogram(aes(x = replicate(1000, mean(sample(pop$z, 100)))), bins = 20) +
+  geom_vline(xintercept = p0, color = palette()[3], 
+             linetype = "dotted", linewidth = 2) +
+  scale_x_continuous(breaks = c(0, p0, 0.2),
+                     labels = expression(0, theta, 0.2)) +
+  coord_cartesian(xlim = c(0, 0.2), clip = "off") +
+  labs(x = NULL, y = NULL, title = expression(T[100])) +
+  theme_sizes
+dist_500 <- ggplot() +
+  theme_classic() +
+  geom_histogram(aes(x = replicate(1000, mean(sample(pop$z, 500)))), bins = 20) +
+  geom_vline(xintercept = p0, color = palette()[3], 
+             linetype = "dotted", linewidth = 2) +
+  scale_x_continuous(breaks = c(0, p0, 0.2),
+                     labels = expression(0, theta, 0.2)) +
+  coord_cartesian(xlim = c(0, 0.2), clip = "off") +
+  labs(x = NULL, y = NULL, title = expression(T[500])) +
+  theme_sizes
+dist_20
+dist_100
+dist_500
+```
+
+::::
+:::::
+::::::
+
+# Convergence in probability {.half-title .center}
+
+::::: {.column width="45%"}
+::: {.fragment .note}
+The definition works when $W$ is a constant - i.e., $P\left(W=w\right)=1$ for some constant $w$.
+:::
+:::::
+
+:::::: {.full-height .right}
+::::: {.definition}
+
+Let $Y_1$, $Y_2$, $Y_3$, ... be an infinite sequence of random variables, and let $W$ be another random variable. We say the sequence $\left\{Y_n\right\}$ **converges in probability** to $W$ if 
+
+$$\lim_{n\to\infty}P\left(\left|Y_n-W\right|\ge\varepsilon\right)=0$$
+
+for all $\varepsilon >0$, and we write
+
+$$Y_n\overset{p}{\to}W.$$
+
+:::::
+::::::
+
+## Example: Convergence in probability to a constant
+
+::::::: {.columns}
+:::::: {.column}
+Suppose $Z_n\sim\text{Exp}(n)$ for $n=1,2,\ldots$, and $y=0$. Let $\varepsilon$ be any positive number.
+
+
+::: {.incremental .nobullet}
+
++ $\phantom{=}P\left(\left|Z_n - y\right|\ge \varepsilon\right)$
++ $=P\left(Z_n\ge \varepsilon\right)$
++ $=\int_\varepsilon^\infty ne^{-nu}du= e^{-n\varepsilon}$
+
+:::
+
+::: {.fragment}
+$$e^{-n\varepsilon}\to0\quad\text{as}\quad n\to\infty$$
+:::
+
+::: {.fragment}
+
+$$\implies Z_n\overset{p}{\to}y$$
+
+:::
+::::::
+:::::: {.column .fragment}
+
+<br />
+
+```{r}
+ggplot() +
+  theme_void() +
+  scale_x_continuous(limits = c(0, 1)) +
+  coord_cartesian(ylim = c(0, 8), clip = "off") +
+  geom_function(fun = dexp, args = list(rate = 1),
+                color = grey(.8)) +
+  geom_function(fun = dexp, args = list(rate = 2),
+                color = grey(.7)) +
+  geom_function(fun = dexp, args = list(rate = 4),
+                color = grey(.6)) +
+  geom_function(fun = dexp, args = list(rate = 8),
+                color = grey(.5)) +
+  geom_function(fun = dexp, args = list(rate = 16),
+                color = grey(.4)) +
+  geom_function(fun = dexp, args = list(rate = 32),
+                color = grey(.3)) +
+  geom_function(fun = dexp, args = list(rate = 64),
+                color = grey(.2)) +
+  annotate("segment", x = .8, xend = .2, y = 5, yend = 5,
+           arrow = arrow(type = "closed"), linewidth = 2) +
+  annotate("text", x = .5, y = 5.5, hjust = .5, vjust = 0,
+           label = "Concerntrates around 0", size = 10) +
+  annotate("text", x = .5, y = 4.5, hjust = .5, vjust = 1,
+           label = "as n approaches infinty", size = 10) +
+  labs(title = expression(paste("Probability density function of ",Z[n]))) +
+  theme(plot.title = element_text(size = 36, hjust = .5))
+```
+
+::::::
+:::::::
+
+## Example: Convergence in probability to a random variable
+
+:::::::: {.columns}
+::::::: {.column}
+
+Let $U\sim U(0,1)$. Define $X_n$ by
+
+$$X_n=\begin{cases}1 & U\le \frac{1}{2}-\frac{1}{n} \\
+0 & \text{otherwise}\end{cases}$$
+
+and $Y$ by
+
+$$Y=\begin{cases}1 & U\le \frac{1}{2} \\
+0 & \text{otherwise}\end{cases}$$
+
+:::::::
+::::::: {.column}
+
+For any $\varepsilon>0$,
+
+:::: {.nobullet}
++  $\phantom{=}P\left(\left\lvert X_n-Y\right\rvert\ge \varepsilon \right)$
+::::
+
+::::: {.fragment}
+:::: {.note}
+
+```{r}
+#| fig.asp: .3
+ggplot() +
+  theme_void() +
+  annotate("segment", x = 1, xend = 10, y = .5, yend = .5,
+           linewidth = 3, arrow = arrow(type ="closed"),
+           color = palette()[3]) +
+  annotate("segment", x = 0, xend = 10, y = 0, yend = 0,
+           linewidth = 3, arrow = arrow(type ="closed"),
+           color = palette()[5]) +
+  annotate("text", x = c(0, 1, 5), y = c(-.1, .4, -.1), vjust = 1, 
+           label = c(0, "epsilon", "group('|',X[n]-Y,'|')"),
+           parse = TRUE, size = 14) +
+  annotate("text", x = 3, y = .55, vjust = 0, hjust = 0,
+           label = "group('|',X[n]-Y,'|')>=epsilon", parse = TRUE,
+           size = 12, colour = palette()[3]) +
+  annotate("text", x = 2, y = .05, vjust = 0, hjust = 0,
+           label = "group('|',X[n]-Y,'|')>0", parse = TRUE,
+           size = 12, colour = palette()[5]) +
+  coord_cartesian(xlim = c(0, 10), ylim = c(-.5, 1)) +
+  annotate("segment", x = 0, y = 0, xend = 0, yend = 1, 
+           linetype = "dotted") +
+  annotate("segment", x = 1, y = .5, xend = 1, yend = 1, 
+           linetype = "dotted")
+  
+```
+
+The event [$\{X_n\neq Y\}=\{\left|X_n- Y\right|>0\}$]{.accent-five} implies [$\{\left|X_n-Y\right|\ge \varepsilon\}$]{.accent-three} for any $\varepsilon>0$.
+
+::::
+:::: {.nobullet}
++ $\le P\left(X_n\neq Y\right)$
+::::
+:::::
+
+:::::::
+::::::::
+
+
+## Example: Convergence in probability to a random variable
+
+:::::::: {.columns}
+::::::: {.column}
+
+Let $U\sim U(0,1)$. Define $X_n$ by
+
+$$X_n=\begin{cases}1 & U\le \frac{1}{2}-\frac{1}{n} \\
+0 & \text{otherwise}\end{cases}$$
+
+and $Y$ by
+
+$$Y=\begin{cases}1 & U\le \frac{1}{2} \\
+0 & \text{otherwise}\end{cases}$$
+
+:::::::
+::::::: {.column} 
+
+For any $\varepsilon>0$,
+
+::::: {.nobullet}
++  $\phantom{=}P\left(\left\lvert X_n-Y\right\rvert \ge \varepsilon \right)$
++  $\le P\left(X_n\neq Y\right)$
+:::::
+
+::::: {.note}
+
+```{r}
+#| fig.asp: .3
+ggplot() +
+  theme_void() +
+  annotate("segment", x = 0, xend = .3, y = 0, yend = 0,
+           linewidth = 3, color = palette()[5]) +
+  annotate("segment", x = 0, xend = .5, y = .5, yend = .5,
+           linewidth = 3, color = palette()[3]) +
+  annotate("text", x = .25, y = .55, vjust = 0, hjust = 0.5,
+           label = "Y==1", parse = TRUE,
+           size = 12, colour = palette()[3]) +
+  annotate("text", x = .15, y = .05, vjust = 0, hjust = 0.5,
+           label = "X[n]==1", parse = TRUE,
+           size = 12, colour = palette()[5]) +
+  coord_cartesian(xlim = c(0, 1), ylim = c(0, 1)) +
+  scale_x_continuous(breaks = c(0, .3, .5, 1), name = "U",
+                     labels = expression(0, frac(1,2)-frac(1,n), frac(1,2), 1)) +
+  theme(axis.line.x = element_line(),
+        axis.ticks.x = element_line(),
+        axis.ticks.length.x = unit(1, "line"),
+        axis.text.x = element_text(size = 16),
+        axis.title.x = element_text(size = 24))
+```
+
+:::::
+::::: {.nobullet}
++  $=P\left(\frac{1}{2}-\frac{1}{n} < U \le \frac{1}{2}\right)$
+
+:::::
+
+:::::::
+::::::::
+
+## Example: Convergence in probability to a random variable
+
+:::::::: {.columns}
+::::::: {.column}
+
+Let $U\sim U(0,1)$. Define $X_n$ by
+
+$$X_n=\begin{cases}1 & U\le \frac{1}{2}-\frac{1}{n} \\
+0 & \text{otherwise}\end{cases}$$
+
+and $Y$ by
+
+$$Y=\begin{cases}1 & U\le \frac{1}{2} \\
+0 & \text{otherwise}\end{cases}$$
+
+:::::::
+::::::: {.column} 
+
+For any $\varepsilon>0$,
+
+::::: {.nobullet}
++  $\phantom{=}P\left(\left\lvert X_n-Y\right\rvert \ge \varepsilon \right)$
++  $\le P\left(X_n\neq Y\right)$
++  $=P\left(\frac{1}{2}-\frac{1}{n} < U \le \frac{1}{2}\right)$
++  $=\frac{1}{n}$
+:::::
+
+:::: {.fragment}
+$$ \lim_{n\to\infty} P\left(\left\lvert X_n-Y\right\rvert \ge \varepsilon \right) = 0$$
+::::
+::: {.fragment}
+
+$$\implies X_n\overset{p}{\to}Y$$
+
+:::
+:::::::
+::::::::
+
+# Law of large numbers
+
+## Chebyshev's inequality {.half-title .center}
+
+:::::: {.full-height .right}
+::: {.definition}
+
+Any random variable $Y$ with $E\left(Y\right)<\infty$ and any $a>0$ satisfy
+
+$$P\left(\left|Y-E\left(Y\right)\right|\ge a\right)\le \frac{\text{Var}\left(Y\right)}{a^2}.$$
+
+:::
+::::::
+
+## Chebyshev's inequality
+
+Consider a discrete random variable $Y$ with $E(Y)=\mu<\infty$ and
+with positive probability masses at $y_i$ for $i=1,2,\ldots$. 
+
+::::::: {.columns}
+:::::: {.column width="70%"}
+::::: {.incremental .nobullet}
++  $\text{Var}(Y)=E\left[\left(Y-\mu\right)^2\right]$
++  $\phantom{\text{Var}(Y)}=\sum_{i=1}^\infty \left(y_i-\mu\right)^2 P\left(Y=y_i\right)$
+:::::
+::::: {.fragment}
+:::: {.note}
+$\left(y_i-\mu\right)^2\ge0$ and $P\left(Y=y_i\right)\ge0$ for all $i$.
+::::
+:::: {.nobullet}
++  $\phantom{\text{Var}(Y)}\ge \sum_{i:\left\lvert y_i-\mu\right\rvert\ge a}\left(y_i-\mu\right)^2 P\left(Y=y_i\right)\qquad a>0$
+::::
+:::::
+:::: {.nobullet .incremental}
++  $\phantom{\text{Var}(Y)}\color{DarkOrchid}{\ge} \sum_{\color{DarkOrchid}{i:\left\lvert y_i-\mu\right\rvert\ge a}} \color{DarkOrchid}{a^2} P\left(Y=y_i\right)$
++  $\phantom{\text{Var}(Y)}=a^2P\left(\left\lvert Y-\mu\right\rvert\ge a\right)$
+::::
+::::::
+::::: {.column width="30%"}
+:::: {.fragment .note}
+This proves Chebyshev's inequality for discrete random variables. 
+::::
+:::: {.fragment .note}
+If interested, see the proof for continuous random variables in Section 13.2 of Dekking et al.
+::::
+:::: {.fragment .note}
+You won't be tested on understanding the proof but understanding the implications and using the inequality.
+::::
+:::::
+:::::::
+
+## Example: Quick exercise 13.2 from Dekking et al.
+
+```{r}
+ex132 <- tibble(k = seq(1, 4, by = 0.01)) %>%
+  mutate(
+    exact = pexp(k + 1),
+    chebyshev = 1 - 1 / k^2
+  )
+p132 <- ggplot(ex132, aes(x = k)) +
+  theme_classic() +
+  geom_line(aes(y = exact), linetype = "dotted") +
+  geom_line(aes(y = chebyshev), linetype = "dashed") +
+  geom_point(aes(y = exact), size = 4,
+             data = ex132 |> filter(k %in% c(1,2,3))) +
+  geom_point(aes(y = chebyshev), pch = 4, size = 4,
+             data = ex132 |> filter(k %in% c(1,2,3))) +
+  annotate("text", x = 1, y = 1, hjust = 0, vjust = 1, 
+           label = "F[Y]~(1~+~k)", 
+           size = 10, parse = TRUE) +
+  annotate("text", x = 1.5, y = 0.5, hjust = 0, vjust = 1, 
+           label = "Chebyshev's lower bound", size = 8) +
+  labs(y = expression(paste("P(|Y - ", mu, "| < k", sigma, ")"))) +
+  scale_y_continuous(limits = c(0, 1), breaks = c(0, 1)) +
+  theme_sizes
+```
+
+::::::: {.columns}
+:::::: {.column}
+
+Calculate $P\left(\left|Y-\mu\right|<k\sigma\right)$ for $k=1,2,3$ when 
+$$Y\sim\text{Exp}(1),$$
+$$\mu=E\left(Y\right),$$ 
+and 
+$$\sigma^2=\text{Var}\left(Y\right).$$ 
+
+Compare the computed values with the Chebyshev's inequality bounds.
+:::::: 
+:::::: {.column}
+:::: {.fragment}
+Exact probability
+::::
+
+::: {.incremental .nobullet}
++  $\phantom{=}P\left(\left|Y-\mu\right|<k\sigma\right)$
++  $=P\left(1 - k < Y < 1 + k\right)$
++  $=P\left(Y < 1+k\right)$
++  $=F_Y(1+k)$
+:::
+:::: {.fragment}
+Chebyshev's inequality bound
+::::
+
+::: {.incremental .nobullet}
++  $\phantom{=}P\left(\left|Y-\mu\right|<k\sigma\right)$
++  $=1-P\left(\left|Y-\mu\right|\ge k\sigma\right)$
++  $\ge1-\frac{\sigma^2}{k^2\sigma^2}=1-\frac{1}{k^2}$
+:::
+::::::
+:::::::
+
+
+## {.center}
+
+::::::: {.columns}
+:::::: {.column}
+
+```{r}
+#| fig-asp: 1
+p132
+```
+
+::::::
+:::::: {.column}
+
+:::: {.nobullet}
++  Chebyshev's inequality provides a lower bound for
+the probability of a random variable falling within a certain distance 
+from its mean.
+::::
+
+::::::
+:::::::
+
+## Example: Sample mean
+
+:::::::: {.columns}
+::::::: {.column}
+
+Apply Chebyshev's inequality to $\overline{X}_n=\left.\sum_{i=1}^n X_i\right/n$ 
+where $X_1$, $X_2$, ..., $X_n$ are random samples from a population. Let $\mu$ and $\sigma^2$ be the population mean and variance.
+
+:::: {.fragment .note}
+We will assume random samples from a population are independent and identically distributed.
+::::
+
+:::::::
+::::::: {.column .fragment}
+
+For any $\varepsilon > 0$,
+
+::::: {.fragment}
+$$\phantom{=}P\left(\left|\overline{X}_n-\mu\right|>\varepsilon\right)
+\le \frac{\sigma^2}{n \varepsilon^2}$$
+:::::
+
+::: {.note .fragment}
+What happens as we take $n$ to infinity?
+:::
+:::::::
+::::::::
+
+## (Weak) law of large numbers {.center .half-title}
+
+:::::: {.column width="45%"}
+:::: {.fragment .note}
+The proof shown in class requires a finite variance but 
+you can prove the law without the assumption.
+::::
+:::: {.fragment .note}
+There is the _strong law of large number_, which states
+$$P\left(\lim_{n\to\infty}\overline{X}_n=\mu\right)=1$$
+but we will focus on the WLLN in this course.
+::::
+::::::
+::::::: {.full-height .right}
+
+<br />
+
+::: {.definition}
+Suppose $X_1$, $X_2$, ..., $X_n$ are independent random variables with expectation $\mu$ and variance $\sigma^2$. Then for any $\varepsilon > 0$,
+
+$$\lim_{n\to\infty}P\left(\left|\overline{X}_n-\mu\right|>\varepsilon\right)=0,$$
+
+where $\overline{X}_n=\left.\sum_{i=1}^n X_i\right/n$.
+
+That is, $\overline{X}_n$ converges in probability to $\mu$.
+:::
+:::::::
+
+## Example: Sample means from a normal distribution
+
+:::::: {.columns}
+::::: {.column}
+
+Roughly speaking, the law states that
+a sample mean _converges_ to the population mean
+as we increase the sample size.
+
+::: {.fragment}
+For example, we can observe $\overline{X}_n$ converging quickly to $0$ 
+when we simulate
+
+$$X_i\sim N(0,1)$$
+
+for $i=1,2,3,\dots,100$.
+:::
+::::
+::::: {.column .fragment}
+
+```r
+N <- 100
+sims <- rnorm(N)
+Xbars <-  numeric(N)
+for (n in seq_len(N)) {
+  Xbars[n] <- sum(sims[1:n]) / n
+}
+```
+
+```{r}
+set.seed(500)
+N <- 100
+sims <- rnorm(N)
+Xbars <-  numeric(N)
+for (n in seq_len(N)) {
+  Xbars[n] <- sum(sims[1:n]) / n
+}
+ggplot() +
+  theme_classic() +
+  geom_point(aes(x = seq_len(N), y = Xbars), size = 2) +
+  geom_line(aes(x = seq_len(N), y = Xbars), linetype = "dotted") +
+  geom_hline(yintercept = 0, linetype = "dotted", color = 2) +
+  labs(x = "n", y = expression(bar(X)[n])) +
+  scale_x_continuous(breaks = c(0, N)) +
+  scale_y_continuous(breaks = c(-1,0,1)) +
+  theme_sizes
+```
+
+:::::
+::::::
+
+## Example: Sample means from a distribution without a finite mean 
+
+:::::: {.columns}
+::::: {.column}
+
+The sample mean does not converge when the population mean doesn't exist or is not finite.
+
+Cauchy is an example of a distribution with out an expectation. 
+
+Simulating $\overline{X}_n$ for a Cauchy distribution does now show a convergence even at $n=1\ 000$.
+
+::::
+::::: {.column}
+
+```r
+N <- 1000
+sims <- rcauchy(N)
+Xbars <-  numeric(N)
+for (n in seq_len(N)) {
+  Xbars[n] <- sum(sims[1:n]) / n
+}
+```
+
+```{r}
+set.seed(1000)
+N <- 1000
+sims <- rcauchy(N)
+Xbars <-  numeric(N)
+for (n in seq_len(N)) {
+  Xbars[n] <- sum(sims[1:n]) / n
+}
+ggplot() +
+  theme_classic() +
+  geom_point(aes(x = seq_len(N), y = Xbars), size = 2) +
+  geom_line(aes(x = seq_len(N), y = Xbars), linetype = "dotted") +
+  geom_hline(yintercept = 0, linetype = "dotted", color = 2) +
+  labs(x = "n", y = expression(bar(X)[n])) +
+  scale_x_continuous(breaks = c(0, N)) +
+  scale_y_continuous(breaks = 0, labels = "Median") +
+  theme_sizes +
+  theme(axis.text.y = element_text(angle = 90, hjust = .5))
+```
+
+
+:::::
+::::::
+
+# Simulation and LLN {.half-title .center}
+
+
+::::::: {.full-height .right}
+
+:::: {.nobullet .incremental}
++  Computer programs can mimic random samples - e.g., `rnorm()`.
+
++  We have been using simulating random samples with R to estimate expectations and probabilities.
+::::
+
+:::::::
+
+
+## Estimating probabilities via simulation and LLN
+
+:::::: {.columns}
+::::: {.column}
+
+Suppose we are interested in 
+
+$$\theta=P\left(X\in \mathcal{K}\right),$$
+where $X$ is some random variable and $\mathcal{K}$ is a subinterval of $\mathbb{R}$.
+
+Assume that while you don't know the distribution of $X$, you can obtain $n$ random samples of $X$ -  $X_1$, $X_2$, ..., $X_n$.
+
+::: {.note}
+For example, we haven't computed the full distribution of winning a blackjack round but we can simulate it.
+:::
+
+:::::
+::::: {.column}
+:::: {.fragment}
+Let $T_n=\left.\sum_{i=1}^n \mathcal{I}_{X_i\in\mathcal{K}}\right/n$ where 
+
+$$\mathcal{I}_{X_i\in\mathcal{K}}=\begin{cases}
+1 & X_i\in\mathcal{K} \\
+0 & \text{otherwise}\end{cases}$$
+
+
+::: {.note}
+This is equivalent to counting the number of times $X_i\in\mathcal{K}$ and divided by $n$. 
+:::
+::: {.note}
+Based on the notion of the probability as a long-term relative frequency, $T_n$ is an estimator of $\theta$.
+:::
+::::
+:::::
+::::::
+
+## Estimating probabilities via simulation and LLN
+
+::::::: {.columns}
+:::::: {.column width="70%"}
+
+:::: {.nobullet .fragment}
++  $P\left(\mathcal{I}_{X_i\in\mathcal{K}}=1\right)=P\left(X_i\in\mathcal{K}\right)=\theta$
++  $P\left(\mathcal{I}_{X_i\in\mathcal{K}}=0\right)=P\left(X_i\notin\mathcal{K}\right)=1-\theta$
+::::
+
+:::: {.fragment}
+$$\implies \mathcal{I}_{X_i\in\mathcal{K}}\sim\text{Ber}\left(\theta\right)$$
+and
+
+$$E\left[T_n\right]=\theta$$
+
+::::
+
+:::: {.fragment}
+
+$$\implies T_n\overset{p}{\to}\theta$$
+::::
+
+:::: {.fragment .note}
+With a large $n$, we can expect the unbiased estimator to provide an estimate close to the parameter of interest.
+::::
+
+::::::
+:::::: {.column width="30%"}
+::::: {.note}
+
+$$\theta=P\left(X\in \mathcal{K}\right)$$
+:::::
+::::: {.note}
+$$T_n=\left.\sum_{i=1}^n \mathcal{I}_{X_i\in\mathcal{K}}\right/n$$ 
+
+where ...
+
+$$\mathcal{I}_{X_i\in\mathcal{K}}=\begin{cases}
+1 & X_i\in\mathcal{K} \\
+0 & \text{otherwise}\end{cases}$$
+:::::
+::::::
+:::::::
+
+
+# R worksheet
+
+## Install `learnr` and run R worksheet {.half-title}
+
+:::: {.column width="45%"}
+1.   Click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main) to install `learnr` on [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+
+2.   Follow [this link](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Frlesson10&urlpath=shiny%2Frlesson10%2F&branch=main) to open the worksheet
+::::
+
+:::: {.full-height .right}
+
+<br />
+<br />
+
+If you see an error, try:
+
+::: {.note}
+1. Log in to [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2. Find `rlesson09` from _Files_ pane
+3. Click _Run Document_ 
+:::
+
+Other steps you may try:
+
+::: {.note}
+1.  Remove any `.Rmd` and `.R` files on the home directory of [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2.  In RStudio, 
+    i. Click `Tools` > `Global Options`
+    ii. Uncheck _"Restore most recently opened project at startup"_
+3.  Run `install.packages("learnr")` in RStudio after the steps above or click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main)
+:::
+
+::::
+
+
+# Summary
+
+
+:::: {.full-height .right}
+
++  A statistic is a quantity derived from data.
++  An estimator is a function on sample for estimating a parameter in a population of interest.
++  The law of large numbers states that the mean of random samples converge to the population mean.
++  Estimating probabilities and expectations via simulation utilizes the law of large numbers.
+
+::::
+
+
+## Practice questions {.center}
+
+Chapter 13, [Dekking et al.](https://librarysearch.library.utoronto.ca/permalink/01UTORONTO_INST/14bjeso/alma991106910545806196)
+
++   Read section on "Recovering the probability density function" on page. 189
++   Quick Exercises 13.1, 13.3
++   Exercises except 13.2 to 13.11
+
++   See a collection of corrections by the author [here](https://www.tudelft.nl/ewi/over-de-faculteit/afdelingen/applied-mathematics/applied-probability/education/mips)
+

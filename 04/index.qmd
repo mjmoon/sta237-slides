@@ -1,0 +1,1598 @@
+---
+title: "Lecture 4: Continuous Random Variables"
+subtitle: "STA237: Probability, Statistics, and Data Analysis I"
+author: "Michael Jongho Moon"
+institute: "PhD Student, DoSS, University of Toronto"
+date: "May 17, 2023"
+date-format: full
+format:
+  revealjs:
+    width: 1280
+    height: 720
+    theme: [default, ../theme.scss]
+    css: "style.css"
+    chalkboard: true
+    footer: |
+      &copy; 2023. Michael J. Moon. University of Toronto. 
+      
+      Sharing, posting, selling, or using this material
+      outside of your personal use in this course is
+      <strong>NOT</strong> permitted under any circumstances.
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(fontawesome)
+library(ggplot2)
+library(ggforce)
+knitr::opts_chunk$set(eval = TRUE)
+palette(RColorBrewer::brewer.pal(8, "Accent"))
+# plot(1:5, col = 1:5, cex = 2, pch = 16)
+```
+
+
+# Example: A broken watch {.half-title}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+ticks <- tibble(hour = 1:12) |>
+  mutate(
+    x = cospi(hour / 6),
+    y = sinpi(hour / 6),
+    xend = x * 1.1,
+    yend = y * 1.1
+  )
+watch <- ggplot() +
+  theme_void() +
+  geom_segment(aes(x = x, y = y, xend = xend, yend = yend), 
+               data = ticks, linewidth = 2, color = "darkgrey") +
+  geom_segment(aes(x = 0, y = 0, xend = -.2, yend = .6), 
+               linewidth = 3, colour = "grey60") +
+  geom_segment(aes(x = -.2, y = .6, xend = -.25,, yend = .2), 
+               arrow = arrow(), linewidth = 3, colour = "grey60") +
+  geom_point(aes(x = -.1, y = -.4), size = 8, colour = "grey40") +
+  geom_point(aes(x = 0, y = 0), size = 10) +
+  geom_circle(aes(x0 = 0, y0 = 0, r = 1.1), size = 3) +
+  geom_segment(aes(x = -.1, y = -.4, xend = .4, yend = .2),
+               arrow = arrow(type = "closed"), linewidth = 3, lineend = "round",
+               colour = "grey40") 
+houratnine <- geom_segment(aes(x = 0, y = 0, xend = -.5, yend = 0), size = 3,
+               arrow = arrow(type = "closed", length = unit(50, "pt")))
+watch + houratnine
+```
+
+:::: {.full-height .right}
+
+<br />
+
+::: {.incremental .nobullet}
++  Suppose you find a broken watch with only the hour hand in its place.
++  What is the probability that the watch stopped at exactly 9 o'clock?
++  Assume an equal probability for any position of the hour hand.
++  Let $H$ be the random variable that represent the position of the hour hand. 
+We want to compute  
+$$P\left(H=9\right).$$
+:::
+
+::::
+
+## {.center}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+atnine <- ggplot() +
+  theme_void() +
+  geom_segment(aes(x = x, y = y, xend = xend, yend = yend), 
+               data = ticks, size = 2, color = "darkgrey") +
+  geom_point(aes(x = 0, y = 0), size = 10) + 
+  geom_circle(aes(x0 = 0, y0 = 0, r = 1.1), size = 3) +
+  geom_segment(aes(x = 0, y = 0, xend = -1, yend = 0), colour = 2) +
+  houratnine
+atnine
+```
+
+:::: {.full-height .right}
+
+<br />
+
+::: {.incremental .nobullet}
++  There are 12 hours on a watch.
++  Is it then
+$$P\left(H=9\right)=\frac{1}{12}?$$
+:::
+::::
+
+## {.center}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+ggplot() +
+  theme_void() +
+  geom_segment(aes(x = x, y = y, xend = xend, yend = yend), 
+               data = filter(ticks, hour %in% c(5, 6)), size = 2, color = "darkgrey") +
+  geom_point(aes(x = 0, y = 0), size = 10) + 
+  geom_arc(aes(x0 = 0, y0 = 0, r = 1.1, start = 1.4 * pi, end = 1.8 * pi), size = 3) +
+  geom_segment(aes(x = 0, y = 0, xend = -cos(2.005 * pi), yend = sin(2.005 * pi)), colour = 2) +
+  geom_segment(aes(x = 0, y = 0, xend = -.5 * cos(2.005 * pi), yend = .5 * sin(2.005 * pi)), size = 3,
+               arrow = arrow(type = "closed", length = unit(50, "pt")))
+```
+
+:::: {.full-height .right}
+
+<br />
+
+::: {.nobullet}
++  What if the hour hand was off the mark by very small amount?
+:::
+::::
+
+## {.center}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+ggplot() +
+  theme_void() +
+  geom_segment(aes(x = x, y = y, xend = xend, yend = yend), 
+               data = filter(ticks, hour %in% c(5, 6)), size = 2, color = "darkgrey") +
+  geom_point(aes(x = 0, y = 0), size = 10) + 
+  geom_arc(aes(x0 = 0, y0 = 0, r = 1.1, start = 1.4 * pi, end = 1.8 * pi), size = 3) +
+  geom_segment(aes(x = 0, y = 0, xend = -cos(pi / 12), yend = sin(pi / 12)), colour = 2) +
+  geom_segment(aes(x = 0, y = 0, xend = -.5 * cos(pi / 12), yend = .5 * sin(pi / 12)), size = 3,
+               arrow = arrow(type = "closed", length = unit(50, "pt")))
+```
+
+:::: {.full-height .right}
+
+<br />
+
+::: {.nobullet}
++  What if the hour hand was exactly half-way between 9 and 10?
+:::
+::: {.nobullet .incremental}
++  Position of the hand is a location on a continuous curve.
++  There are infinite number of locations on a continuous curve.
++  $$P(H=9)=0$$
++  $H$ is an example of a continuous random variable - variables that are uncountable.
+:::
+::::
+
+## {.center}
+
+:::::: {.columns}
+:::: {.column}
+
+### Other examples
+
+::: {.incremental}
++  The height of a person. There is no _next_ value after 176.33 cm.
++  Waiting time at a restaurant. We can't count time in general.
++  Continuous variables are also used to model values that can only be discrete 
+in practice such as a person's annual income in CAD.
+:::
+::: {.incremental .nobullet}
++  How do we define probabilities associated with a continuous random variable?
+
+:::
+::::
+:::: {.column .fragment}
+
+```{r}
+#| echo: false
+#| fig-asp: 1
+ggplot() +
+  theme_void() +
+  geom_arc_bar(aes(x0 = 0, y0 = 0, r = 1.1, r0 = .7,
+                   start = 1.5 * pi, end = 5/3 * pi),
+               fill = "grey80", colour = "grey80") +
+  geom_segment(aes(x = x, y = y, xend = xend, yend = yend), 
+               data = filter(ticks, hour %in% c(5, 6)), size = 2, color = "darkgrey") +
+  geom_point(aes(x = 0, y = 0), size = 10) + 
+  geom_arc(aes(x0 = 0, y0 = 0, r = 1.1, start = 1.4 * pi, end = 1.8 * pi), size = 3) +
+  geom_segment(aes(x = 0, y = 0, xend = -cos(pi / 12), yend = sin(pi / 12)), colour = 2) +
+  geom_segment(aes(x = 0, y = 0, xend = -.5 * cos(pi / 12), yend = .5 * sin(pi / 12)), size = 3,
+               arrow = arrow(type = "closed", length = unit(50, "pt")))
+```
+
+::: {.text-center .accent-five}
+_We use intervals._
+:::
+
+::::
+::::::
+
+# Continuous random variable {.half-title}
+
+
+::::: {.column width="45}
+::: {.note}
+Similar to a probability mass function, a probability density function uniquely defines (the behaviour of) a continuous random variable. 
+:::
+:::::
+
+::::: {.full-height .right}
+
+::: {.definition}
+
+A random variable $X$ is **continuous** if for some function 
+$$f:\mathbb{R}\to\mathbb{R}$$
+and for any numbers $a$ and $b$ with $a\le b$,
+
+$$P\left(a\le X\le b\right)=\int_a^b f(x) dx.$$
+The function $f$ has to satisfy
+
+**(i)** $f(x)\ge 0$ for all $x$, and  
+**(ii)** $\int_{-\infty}^\infty f(x) dx = 1$.
+
+We call $f$ the **probability density function** of $X$ and the value $f(x)$ is the **probability density** of $X$ at $x$.
+
+:::
+:::::
+
+## {.center}
+
+::::: {.columns}
+:::: {.column}
+
+```{r}
+pdf <- tibble(x = seq(0, 7, by = 0.001)) |>
+  mutate(d = dgamma(x, shape = 2))
+ggplot() +
+  theme_void() +
+  geom_line(aes(x = x, y = d), data = pdf) +
+  geom_ribbon(aes(x = x, y = d, ymin = 0, ymax = d), 
+              colour = NA, fill = "grey80",
+              data = filter(pdf, x > 1, x < 2)) +
+  geom_text(aes(x = 1, y = 0, label = "a"), vjust = 1, size = 12) +
+  geom_text(aes(x = 2, y = 0, label = "b"), vjust = 1, size = 12) +
+  geom_text(aes(x = 3, y = dgamma(2.8, 2), label = "f"),
+            vjust = 0, hjust = 0, size = 12) +
+  ylim(c(-0.2, .4))
+```
+
+$$P\left(a\le X\le b\right)=\int_a^b f(x) dx$$
+
+::::
+:::: {.column}
+
+::: {.incremental}
++  $f(x)$ is NOT a probability
++  Both a pmf and a pdf uniquely defines a random variable, but 
+a pmf maps to $[0,1]$ and a pdf to $[0,\infty)$
++  $f(x)$ can be interpreted as a relative measure of likelihood **around** $x$
+:::
+
+::::
+:::::
+
+# Continuous random variable {.half-title}
+
+::::: {.column width="45}
+::: {.note .fragment}
+The definition of a cdf is the same for both discrete and continuous random variables.
+:::
+:::::
+
+::::: {.full-height .right}
+
+::: {.definition}
+The **cumulative distribution function** $F$ of a random variable $X$ is the function
+
+$$F:\mathbb{R}\to [0,1],$$
+
+defined by 
+
+$$F(a)=P(X\le a)\quad$$
+$$\quad\text{for }-\infty<a<\infty.$$
+
+:::
+:::::
+
+```{r}
+#| warning: false
+cdf_ex <- data.frame(x = c(-2, seq(0, 10, 0.01), 12)) |>
+  mutate(
+    pois = ppois(x, 2), 
+    expo = pexp(x, 1/2)
+  )
+continuous_cdf <- ggplot(cdf_ex, aes(x = x)) +
+  theme_void() +
+  geom_line(aes(y = expo)) +
+  scale_y_continuous(breaks = c(0, 1)) +
+  scale_x_continuous(breaks = c(0, 10)) +
+  labs(title = "A continuous random variable's cdf", x = NULL, y = NULL) +
+  coord_cartesian(xlim = c(-1, 11), ylim = c(0, 1)) +
+  theme(
+    axis.text.y = element_text(size = 20),
+    plot.title = element_text(size = 32, margin = unit(c(.2, 0, 1, 0), "lines")),
+    plot.margin = unit(c(1, 1, 1, 1), "lines")
+  )
+discrete_cdf <- ggplot(cdf_ex |> filter(x %% 1 == 0), aes(x = x, y = pois)) +
+  theme_void() +
+  geom_point() +
+  geom_segment(aes(xend = lead(x), yend = pois)) +
+  scale_y_continuous(breaks = c(0, 1)) +
+  scale_x_continuous(breaks = c(0, 10)) +
+  coord_cartesian(xlim = c(-1, 11), ylim = c(0, 1)) +
+  labs(title = "A discrete random variable's cdf", x = NULL, y = NULL) +
+  theme(
+  axis.text.y = element_text(size = 20),
+  plot.title = element_text(size = 32, margin = unit(c(.2, 0, 1, 0), "lines")),
+  plot.margin = unit(c(1, 1, 1, 1), "lines"),
+  plot.background = element_rect(fill = "#eeeeee", linewidth = 0)
+)
+```
+
+## Properties of cumulative distribution functions
+
+:::::: {.columns}
+::::: {.column}
+
+```{r}
+#| fig-asp: .4
+continuous_cdf
+discrete_cdf
+```
+
+:::::
+::::: {.column}
+
+::: {.fragment .note}
++  For continuous random variable $X$ with pdf $f$, we have  
+$F_X(a)=P(X\le a)=\int_{-\infty}^a f(x) dx)$.
++  For discrete random variable $Y$ taking values $y_i$ with pmf $p$ and , we have  
+$F_Y(a)=P(Y\le a)=\sum_{y_i\le a}p(y_i)$.
+:::
+::: {.incremental .nobullet}
++  A cdf uniquely defines a distribution for both discrete and continuous random variables.
++  Continuous random variables have continuous cdfs.
+:::
+
+:::::
+::::::
+
+# Continuous random variable {.half-title}
+
+::::: {.column width="45}
+::: {.note}
+The property provides an alternative definition.
+:::
+:::::
+
+::::: {.full-height .right}
+
+::: {.definition}
+
+A random variable is called **continuous** if its cumulative distribution function $F$ is _continuous everywhere_.
+
+:::
+:::::
+
+## More on cumulative distribution functions
+
+:::::: {.columns}
+::::: {.column}
+
+```{r}
+#| fig-asp: .4
+continuous_cdf
+discrete_cdf
+```
+
+:::::
+::::: {.column}
+
+::: {.fragment}
++  Any cdfs are 
+    i.  non-decreasing,  
+    ii. right-continuous, and
+    iii.  (approaching) 0 on the left end to 1 on the right end
+:::
+
+:::::
+::::::
+
+
+## Example: Dekking et al. Quick Exercise 5.1
+
+
+::::: {columns}
+:::: {.column}
+Suppose a random variable $X$ is defined by the following probability density function.
+
+$$f(x)=\begin{cases}\frac{1}{2\sqrt{x}} & \text{when }0<x<a \\0 &\text{otherwise}\end{cases}$$
+
+What is $a$?
+
+::::
+:::: {.column width="40%"}
+
+::: {.incremental .nobullet}
++  $\int_{-\infty}^\infty f(x) dx =1$ 
+:::
+::: {.note .fragment}
+We know $F(a)=1$ and $F(0)=0$.
+$$\implies \int_{-\infty}^\infty f(x) dx= \int_{0}^a 1\left/(2\sqrt{x})\right. dx$$
+:::
+
+::: {.incremental .nobullet}
++  $\int_{0}^a 1\left/(2\sqrt{x})\right. dx=1$
++  $\int_{0}^a x^{-1/2}\left/2\right. dx=1$
++  $\left. x^{1/2}\right|_{0}^a =1$
++  $a^{1/2}=1$
++  $a = 1$
+:::
+
+::::
+:::::
+
+
+
+# Quantile, percentile, and median {.half-title}
+
+::::: {.full-height .right}
+
+::: {.definition}
+
+Let $X$ be a _continuous_ random variable and $p$ a number between 0 and 1. The <b>$p$<sup>th</sup> quantile</b> or <b>$100\cdot p$<sup>th</sup> percentile</b> of the distribution $X$ is the _smallest_ number $q_p$ such that
+
+$$F(q_p)=P(X\le q_p)=p.$$
+
+The **median** of a distribution is its $50$<sup>th</sup> percentile.
+
+:::
+:::::
+
+# Quantile, percentile, and median {.half-title}
+
+::::: {.column width="45}
+::: {.note}
+The previous definition is ambiguous for discrete random variables since there may not be a value $q$ that satisfies $F(q)=p$.
+:::
+:::::
+
+::::: {.full-height .right}
+
+::: {.definition}
+Let $X$ be a random variable with cumulative distribution function $F$. Then the **quantile function** of $X$ is the function $F^{-1}$ defined by
+
+$$F^{-1}(t) = \min \left\{x: F(x) \ge t \right\},$$
+
+for $0<t<1$.
+:::
+
+:::::
+
+## Quantile functions for continuous vs. discrete {.center}
+
+
+```{r}
+#| include: false
+continuous_quantile <- continuous_cdf +
+  annotate("segment", 
+           x = -2, xend = qexp(.5, 1/2), y = .5, yend = .5,
+           colour = "red", linetype = "dotted", linewidth = 1) +
+  annotate("segment", 
+           x = qexp(.5, 1/2), xend = qexp(.5, 1/2), y = 0, yend = .5,
+           colour = "red", linetype = "dotted", linewidth = 1) +
+  annotate("segment", 
+           x = -2, xend = qexp(.8, 1/2), y = .8, yend = .8,
+           colour = "blue", linetype = "dotted", linewidth = 1) +
+  annotate("segment", 
+           x = qexp(.8, 1/2), xend = qexp(.8, 1/2), y = 0, yend = .8,
+           colour = "blue", linetype = "dotted", linewidth = 1) +
+  scale_y_continuous(breaks = c(0, 0.5, .8)) +
+  scale_x_continuous(breaks = c(0, qexp(.5, 1/2), qexp(.8, 1/2)),
+                     labels = c(0, expression(q[.5]), expression(q[.8]))) +
+  theme(
+    axis.text = element_text(size = 20, colour = c("darkgrey", "red", "blue"))
+  )
+discrete_quantile <- discrete_cdf +
+  annotate("segment", 
+           x = -2, xend = qpois(.5, 2), y = .5, yend = .5,
+           colour = "red", linetype = "dotted", linewidth = 1) +
+  annotate("segment", 
+           x = qpois(.5, 2), xend = qpois(.5, 2), y = 0, yend = ppois(qpois(.5, 2), 2),
+           colour = "red", linetype = "dotted", linewidth = 1) +
+  annotate("segment", 
+           x = -2, xend = qpois(.8, 2), y = .8, yend = .8,
+           colour = "blue", linetype = "dotted", linewidth = 1) +
+  annotate("segment", 
+           x = qpois(.8, 2), xend = qpois(.8, 2), y = 0, yend = ppois(qpois(.8, 2), 2),
+           colour = "blue", linetype = "dotted", linewidth = 1) +
+  scale_y_continuous(breaks = c(0, 0.5, .8)) +
+  scale_x_continuous(breaks = c(0, qpois(.5, 2), qpois(.8, 2)),
+                     labels = c(0, expression(q[.5]), expression(q[.8]))) +
+  theme(
+    axis.text = element_text(size = 20, colour = c("darkgrey", "red", "blue"))
+  )
+```
+
+:::::: {.columns}
+:::: {.column}
+
+```{r}
+continuous_quantile
+```
+
+::::
+:::: {.column}
+
+```{r}
+discrete_quantile
+```
+
+::::
+:::::
+
+## Example: A broken watch
+
+:::::: {.columns}
+::::: {.column width="30%"}
+We assumed there is an equal likelihood of $H$ being between 0 and 12.
+
+:::::
+::::: {.column width="5%"}
+:::::
+::::: {.column width="30%" .fragment}
+
+```{r}
+pdfH <- ggplot() +
+  theme_classic() +
+  geom_segment(aes(x = 0, y = 1/12, xend = 12, yend = 1/12), size = 1) +
+  geom_segment(aes(x = 0, y = 0, xend = -2, yend = 0), size = 1) +
+  geom_segment(aes(x = 12, y = 0, xend = 14, yend = 0), size = 1) +
+  scale_x_continuous(breaks = 0:12) +
+  scale_y_continuous(breaks = c(0, 1/12), 
+                     limits = c(0, .2),
+                     labels = c("0", "k")) +
+  geom_text(aes(x = 12, y = 1/12, label = "f[H]"), 
+            vjust = 0, hjust = 1, size = 20, parse = TRUE) +
+  labs(x = "H", y = NULL) +
+  theme(
+    axis.text = element_text(size = 36),
+    axis.title = element_text(size = 40),
+    axis.line = element_line(size = 1.2),
+    axis.ticks = element_blank()
+  )
+pdfH
+```
+
+::: {.note}
+Its probability density function will be a constant, say $k$, over the interval from 0 to 12.
+
+What is $k$?
+:::
+
+:::::
+::::: {.column width="5%"}
+:::::
+::::: {.column width="30%" .fragment}
+
+```{r}
+cdfH <- ggplot() +
+  theme_classic() +
+  geom_segment(aes(x = 0, y = 0, xend = 12, yend = 1), 
+               size = 1, lineend = "round") +
+  geom_segment(aes(x = 0, y = 0, xend = -2, yend = 0), 
+               size = 1, lineend = "round") +
+  geom_segment(aes(x = 12, y = 1, xend = 14, yend = 1), 
+               size = 1, lineend = "round") +
+  scale_x_continuous(breaks = 0:12) +
+  scale_y_continuous(breaks = c(0, 1), 
+                     limits = c(0, 1)) +
+  geom_text(aes(x = 9, y = 1, label = "F[H]"), 
+            vjust = 1, hjust = 1, size = 20, parse = TRUE) +
+  labs(x = "H", y = NULL) +
+  theme(
+    axis.text = element_text(size = 36),
+    axis.title = element_text(size = 40),
+    axis.line = element_line(size = 1.2),
+    axis.ticks = element_blank()
+  )
+cdfH
+```
+
+
+::: {.note}
+The cumulative distribution function will start to increase from 0 at $H=0$ at a constant rate to reach 1 at $H=12$. $F$ is continuous on $\mathbb{R}$.
+:::
+
+:::::
+::::::
+
+# Common continuous distributions
+
+## Uniform distribution {.center .half-title}
+
+:::: {.column width="45%"}
+::: {.fragment .note}
+
+We use a uniform distribution to assign equal probabilities across a fixed 
+interval.
+
+It often models _completely arbitrary_ experiments, or
+*complete ignorance* about the likelihood of outcomes
+
+:::
+::::
+
+::::: {.full-height .right}
+::: {.definition}
+
+A continuous random variable has a **uniform distribution** on interval $[\alpha, \beta]$ if its probability density function $f$ is given by
+
+$$f(x)=\begin{cases}\frac{1}{\beta-\alpha} & \alpha \le x\le \beta\\ 
+0
+&\text{otherwise.}\end{cases}$$
+
+We denote this distribution by $U(\alpha,\beta)$.
+
+:::
+:::::
+
+## Uniform distribution {.center .half-title}
+
+:::: {.column width="45%"}
+::: {.note}
+
+We use a uniform distribution to assign equal probabilities across a fixed 
+interval.
+
+It often models _completely arbitrary_ experiments, or
+*complete ignorance* about the likelihood of outcomes
+
+:::
+::::
+
+::::: {.full-height .right}
+
+$$Y \sim U(\alpha, \beta)$$
+
+```{r message=FALSE}
+#| layout-ncol: 1
+#| fig-asp: .4
+ggplot() +
+  theme_classic() +
+  geom_function(fun = dunif, xlim = c(0, 1)) +
+  geom_function(fun = dunif, xlim = c(-.2, -.01)) +
+  geom_function(fun = dunif, xlim = c(1.01, 1.2)) +
+  geom_text(aes(x = 1, y = .6, label = "f[Y]"), 
+            parse = TRUE, size = 20) +
+  labs(x = NULL, y = NULL) +
+  scale_y_continuous(breaks = c(0, 1), labels = c(0, expression(1/(beta-alpha)))) +
+  scale_x_continuous(breaks = c(0, 1), 
+                     labels = c(expression(alpha), expression(beta))) +
+  theme(
+    axis.text = element_text(size = 36),
+    axis.title = element_text(size = 40),
+    axis.line = element_line(size = 1.2),
+    axis.ticks = element_blank()
+  )
+
+ggplot() +
+  theme_classic() +
+  geom_function(fun = punif, xlim = c(-.2, 1.2)) +
+  geom_text(aes(x = 1, y = .5, label = "F[Y]"), 
+            parse = TRUE, size = 20, hjust = 0, vjust = .8) +
+  labs(x = NULL, y = NULL) +
+  scale_y_continuous(breaks = c(0, 1)) +
+  scale_x_continuous(breaks = c(0, 1), 
+                     labels = c(expression(alpha), expression(beta))) +
+  theme(
+    axis.text = element_text(size = 36),
+    axis.title = element_text(size = 40),
+    axis.line = element_line(size = 1.2),
+    axis.ticks = element_blank(),
+    plot.margin = unit(c(0, 0, 0, 9), "lines")
+  )
+```
+
+:::::
+
+
+## Example: Air duct cleaning scam calls
+
+:::::: {.columns}
+::::: {.column width="35%"}
+
+Suppose Michael receives approximately $r$ air duct cleaning scam calls every year.  
+
+Let the random variable $T$ be the amount of time between two consecutive calls.
+
+:::::
+::::: {.column width="65%"}
+To compute the distribution of $T$, we model the calls as a Poisson process ...
+
+::: {.incremental}
+
++  divide 1 year into $n$ equal-length intervals
++  make the intervals **small** enough that Michael may receive only 1 call per $1/n$-year interval
++  assume whether Michael receives a call during a particular $1/n$-year interval is identical and independent from each other
+
+:::
+
+:::::
+::::::
+
+## Example: Air duct cleaning scam calls
+
+:::::: {.columns}
+::::: {.column width="35%"}
+
+```{r echo=FALSE, out.width="100%", fig.asp=0.02, dpi=144}
+x5 <- sample.int(5, 3)
+ppois5 <- ggplot() +
+  theme_void() +
+  xlim(0, 10) +
+  geom_vline(xintercept = seq(0, 10, 2), color = "#696969") +
+  geom_hline(yintercept = 0, color = "#696969") +
+  annotate("segment", y = 0, yend = 0, 
+           x = x5 * 2, xend = x5 * 2 - 2, 
+           color = "#386CB0", linewidth = 2)
+x10 <- sample.int(10, 6)
+ppois10 <- ggplot() +
+  theme_void() +
+  xlim(0, 10) +
+  geom_vline(xintercept = seq(0, 10, 1), color = "#696969") +
+  geom_hline(yintercept = 0, color = "#696969") +
+  annotate("segment", y = 0, yend = 0, 
+           x = x10, xend = x10 - 1, 
+           color = "#386CB0", linewidth = 2)
+x20 <- sample.int(20, 12)
+ppois20 <- ggplot() +
+  theme_void() +
+  xlim(0, 10) +
+  geom_vline(xintercept = seq(0, 10, .5), color = "#696969") +
+  geom_hline(yintercept = 0, color = "#696969") +
+  annotate("segment", y = 0, yend = 0, 
+           x = x20 / 2, xend = (x20 - 1) / 2, 
+           color = "#386CB0", linewidth = 2)
+x40 <- sample.int(40, 24)
+ppois40 <- ggplot() +
+  theme_void() +
+  xlim(0, 10) +
+  geom_vline(xintercept = seq(0, 10, .25), color = "#696969") +
+  geom_hline(yintercept = 0, "#696969") +
+  annotate("segment", y = 0, yend = 0, 
+           x = x40 / 4, xend = (x40 - 1) / 4, 
+           color = "#386CB0", linewidth = 2)
+x80 <- sample.int(80, 48)
+ppois80 <- ggplot() +
+  theme_void() +
+  xlim(0, 10) +
+  geom_vline(xintercept = seq(0, 10, .125), color = "#696969") +
+  geom_hline(yintercept = 0, color = "#696969") +
+  annotate("segment", y = 0, yend = 0, 
+           x = x80 / 8, xend = (x80 - 1) / 8, 
+           color = "#386CB0", linewidth = 2)
+ppois5
+ppois10
+ppois20
+ppois40
+ppois80
+```
+
+
+$$\vdots$$
+
+```{r echo=FALSE, out.width="100%", fig.asp=0.02, dpi=144}
+x1000 <- sample.int(1000, 600)
+ppois1000 <- ggplot() +
+  theme_void() +
+  xlim(0, 10) +
+  geom_vline(xintercept = seq(0, 10, 0.01), color = "#696969", alpha = .2) +
+  geom_hline(yintercept = 0, color = "#696969") +
+  annotate("segment", y = 0, yend = 0, 
+           x = x1000 / 100, xend = (x1000 - 1) / 100, 
+           color = "#386CB0", linewidth = 2)
+ppois1000
+```
+
+:::::
+::::: {.column width="65%"}
+To compute the distribution of $T$, we model the calls as a Poisson process ...
+
++  divide 1 year into $n$ equal-length intervals
++  make the intervals **small** enough that Michael may receive only 1 call per $1/n$-year interval
++  assume whether Michael receives a call during a particular $1/n$-year interval is identical and independent from each other
+
+
+::: {.fragment}
+Then, $p_n=r/n$ represents the probability of getting a scam call in any $1/n$-year interval.
+:::
+
+:::::
+::::::
+
+
+## {.center}
+
+:::::: {.columns}
+::::: {.column}
+$$P(T>t\text{ years})$$
+
+::: {.nobullet .incremental}
++ $=P(T>t\times n\times1/n\text{-year intervals})$
++ $=\left(1-p_n\right)^{t\cdot n}$
++ $=\left(1-\frac{r}{n}\right)^{t\cdot n}$
+:::
+::: {.fragment}
+Let $n\to\infty$.
+:::
+::: {.nobullet .incremental}
++  $P(T>t\text{ years})$  
+$= \lim_{n\to\infty}\left(1 - r\cdot\frac{1}{n}\right)^{t\cdot n}$
++  $=e^{-t\cdot r}$
+:::
+:::::
+::::: {.column}
+
+::: {.fragment}
+To compute $F_T(t)$, we can use
+
+$$F_T(t)=P(T\le t)=1-e^{-rt}.$$
+
+:::
+
+::: {.fragment}
+Taking its derivative gives its pdf.
+
+$$f_T(x) = \frac{d}{dx} \left(1-e^{-rx}\right) = re^{-rx}$$
+
+:::
+
+::: {.fragment}
+
+$T$ is an example of an exponential random variable.
+
+:::
+:::::
+::::::
+
+
+## Exponential distribution {.center .half-title}
+
+:::: {.column width="45%"}
+::: {.fragment .note}
+
+Exponential random variables are often used to model time until the next event 
+in a Poisson process. $\lambda$ is the expected rate of events .
+
+:::
+::::
+
+::::: {.full-height .right}
+::: {.definition}
+
+A continuous random variable has an **exponential distribution** with parameter $\lambda$, $\lambda>0$, if its probability density function $f$ is given by
+
+$$f(x) = \begin{cases} \lambda e^{-\lambda x} & x\ge0\\
+0 & \text{otherwise.}
+\end{cases}$$
+
+We denote this distribution by $\text{Exp}(\lambda)$.
+
+:::
+:::::
+
+## Exponential distribution {.center .half-title}
+
+:::: {.column width="45%"}
+::: {.note}
+
+Exponential random variables are often used to model time until the next event 
+in a Poisson process. $\lambda$ is the expected rate of events .
+
+:::
+::: {.note .fragment}
+
+While $F_Y$ is everywhere, $f_Y$ is discontinuous at $0$.
+
+:::
+::::
+
+::::: {.full-height .right}
+
+$$Y \sim \text{Exp}(1)$$
+
+```{r message=FALSE}
+#| layout-ncol: 1
+#| fig-asp: .4
+expx <- tibble(x = seq(-1, 5, by = .01))
+ggplot() +
+  theme_classic() +
+  geom_function(aes(x = x), fun = dexp, data = expx |> filter(x > 0), xlim = c(0, 5)) +
+  geom_line(aes(x = x), y = 0, data = expx |> filter(x < 0)) +
+  geom_text(aes(x = 1, y = .6, label = "f[Y]"), 
+            parse = TRUE, size = 20) +
+  labs(x = NULL, y = NULL) +
+  scale_y_continuous(breaks = c(0, 1)) +
+  scale_x_continuous(breaks = c(0, 5)) +
+  theme(
+    axis.text = element_text(size = 36),
+    axis.title = element_text(size = 40),
+    axis.line = element_line(size = 1.2),
+    axis.ticks = element_blank()
+  )
+
+ggplot() +
+  theme_classic() +
+  geom_function(aes(x = x), fun = pexp, data = expx) +
+  geom_text(aes(x = 1, y = .5, label = "F[Y]"), 
+            parse = TRUE, size = 20, hjust = 0, vjust = .8) +
+  labs(x = NULL, y = NULL) +
+  scale_y_continuous(breaks = c(0, 1)) +
+  scale_x_continuous(breaks = c(0, 5)) +
+  theme(
+    axis.text = element_text(size = 36),
+    axis.title = element_text(size = 40),
+    axis.line = element_line(size = 1.2),
+    axis.ticks = element_blank()
+  )
+```
+
+:::::
+
+## {}
+### Example: Customer arrivals
+
+_(Adopted from Devore & Berk)_
+
+::: {.r-fit.text}
+Let $X$ be the time (hr)  between two successive arrivals at the drive-up window of a local bank. Suppose $X$ has an exponential distribution with $\lambda=\lambda_0$. 
+
+What is the probability that no customer showing up for first 2 hours after opening? 
+:::
+
+```{r}
+#| fig.asp: .1
+ggplot() +
+  theme_void() +
+  xlim(0, 2) +
+  geom_vline(xintercept = 0:2) +
+  geom_hline(yintercept = 0) +
+  geom_point(aes(x= 1, y = 0), fill = "white", size = 8, pch = 21) +
+  geom_text(aes(x = 1, y = 0, label = "2"), size = 6,) +
+  annotate("text", x = 0.5, y = 0, vjust = -0.5, 
+           label = "No Customer", size = 8) +
+  annotate("text", x = 1.5, y = 0, vjust = -0.5, 
+           label = "?", size = 8)
+```
+
+::: {.fragment}
+Suppose 2 hours have passed since opening without a customer. What is the probability that no customer shows up for the next 2 hours?
+:::
+
+## {}
+
+:::::: {.columns}
+::::: {.column}
+The probability that no customer shows up in the first 2 hours is
+
+:::: {.incremental .nobullet}
++  $$P(X>2)$$
++  $=1-F(2)$
++  $=1-\int_0^2 \lambda_0 e^{-\lambda_0x} dx$
++  $=1-\left.e^{-\lambda_0 x}\right|_0^2$
++  $=1-e^{-\lambda_00}+e^{-\lambda_02}$
++  $=e^{-2\lambda_0}$
+::::
+:::::
+::::: {.column .fragment}
+
+The probability that no customer shows up for next 2 hours **after** no customer showed up for the first 2 hours is
+
+:::: {.incremental .nobullet}
++  $$P(X>4 | X>2)$$
++  $=\frac{P(\{X>4\}\cap\{X>2\})}{P(X>2)}$
+::::
+
+::: {.fragment .note}
+because $\{X>4\}$ implies $\{X>2\}$.
+:::
+
+::: {.incremental .nobullet}
++ $=\frac{P(X>4)}{P(X>2)}=\frac{e^{-4\lambda_0}}{e^{-2\lambda_0}}=e^{-2\lambda_0}$
+:::
+:::::
+::::::
+:::::: {.accent-five .fragment .note}
+$P(X>4|X>2)=P(X>2)$  
+
+Whether there was a customer in the **past** 2 hours does not change the probability of a customer's arrival in the **next** 2 hours.
+::::::
+
+## {}
+### Memoryless property of exponential random variables
+
+::::: {.columns}
+:::: {.column}
+For any $s,t>0$,
+
+$$\begin{align} & P(X>s + t | X>s) \\ = & \frac{P(X>s + t)}{P(X>s)} \\ = & \frac{1-\left(1-e^{-\lambda(s+t)}\right)}{1-\left(1-e^{\lambda s}\right)} \\ =&\frac{e^{-\lambda s}e^{-\lambda t}}{e^{-\lambda s}} \\ = & P(X>t)\end{align}$$
+
+::::
+:::: {.column .center}
+
+The timing of a past event does not change the probability of the timing for the next event.
+
+::::
+:::::
+
+## Gamma distribution {.center .half-title}
+
+:::: {.column width="45%"}
+::: {.note .fragment}
+
+$\Gamma(\cdot)$ is called the _gamma function_ and $\Gamma(n)=(n-1)!$ when $n$ is a positive integer.
+
+:::
+::::
+
+::::: {.full-height .right}
+::: {.definition}
+
+A continuous random variable has a **gamma distribution** with parameter $\alpha$ and $\beta$,  $\alpha>0$ and $\beta>0$, if its probability density function $f$ is given by
+
+$$f(x)=\frac{1}{\Gamma(\alpha)}\beta^\alpha x^{\alpha-1}e^{-\beta x}\quad\text{for }x>0.$$
+
+We denote this distribution by $\text{Gamma}(\alpha, \beta)$.
+
+:::
+:::::
+
+## Gamma distribution {.center .half-title}
+
+:::: {.column width="45%"}
+::: {.note}
+
+$\Gamma(\cdot)$ is called the _gamma function_ and $\Gamma(n)=(n-1)!$ when $n$ is a positive integer.
+
+:::
+
+::: {.note}
+
+Gamma distribution is more versatile in comparison to exponential distribution with two parameters. It is used to model insurance claim amounts, rainfalls, etc.
+
+:::
+::::
+
+::::: {.full-height .right}
+
+$$G\sim \text{Gamma}(\alpha, \beta)$$
+
+```{r message=FALSE}
+#| layout-ncol: 1
+#| fig-asp: .4
+gammax <- tibble(x = seq(0, 5, by = .001))
+ggplot(gammax) +
+  theme_classic() +
+  geom_function(aes(x = x, color = "(1, 1)"), 
+                fun = dgamma, args = list(shape = 1)) +
+  geom_function(aes(x = x, color = "(1, 2)"), 
+                fun = dgamma, args = list(shape = 2)) +
+  geom_function(aes(x = x, color = "(5, 1/2)"), 
+                fun = dgamma, args = list(shape = 5, scale = .5),
+                show.legend = FALSE) +
+  geom_function(aes(x = x, color = "(2, 2)"), 
+                fun = dgamma, args = list(shape = 2, scale = 2),
+                show.legend = FALSE) +
+  scale_colour_discrete(name = NULL, guide = guide_legend(nrow = 2)) +
+  labs(x = NULL, y = NULL, title = expression(f[G])) +
+  scale_y_continuous(breaks = c(0, 1)) +
+  theme(
+    title = element_text(size = 40),
+    legend.text = element_text(size = 24),
+    legend.key.size = unit(42, "pt"),
+    legend.position = c(.7, 1),
+    legend.direction = "horizontal",
+    axis.text = element_text(size = 36),
+    axis.line = element_line(size = 1.2),
+    axis.ticks = element_blank()
+  )
+
+ggplot(gammax) +
+  theme_classic() +
+  geom_function(aes(x = x, color = "(1, 1)"), 
+                fun = pgamma, args = list(shape = 1), 
+                show.legend = FALSE) +
+  geom_function(aes(x = x, color = "(1, 2)"), 
+                fun = pgamma, args = list(shape = 2),
+                show.legend = FALSE) +
+  geom_function(aes(x = x, color = "(5, 1/2)"), 
+                fun = pgamma, args = list(shape = 5, scale = .5)) +
+  geom_function(aes(x = x, color = "(2, 2)"), 
+                fun = pgamma, args = list(shape = 2, scale = 2)) +
+  scale_colour_discrete(name = NULL) +
+  labs(x = NULL, y = NULL, title = expression(F[G])) +
+  scale_y_continuous(breaks = c(0, 1)) +
+  theme(
+    title = element_text(size = 40),
+    legend.text = element_text(size = 36),
+    legend.key.size = unit(42, "pt"),
+    legend.position = "none",
+    axis.text = element_text(size = 36),
+    axis.line = element_line(size = 1.2),
+    axis.ticks = element_blank()
+  )
+
+```
+
+:::::
+
+
+## Normal distribution {.center .half-title}
+
+:::: {.column width="45%"}
+::: {.note .fragment}
+
+Normal distribution, or Gaussian distribution, is central in probability theory
+and statistics.
+
+:::
+::: {.note .fragment}
+
+It is often used to model observational errors. 
+
+:::
+::::
+
+::::: {.full-height .right}
+::: {.definition}
+
+A continuous random variable has a **normal distribution** with parameter $\mu$ and $\sigma^2$, $\sigma^2>0$, if its probability density function $f$ is given by
+
+$$f(x)=\frac{1}{\sigma\sqrt{2\pi}}\exp\left\{-\frac{1}{2}\left(\frac{x-\mu}{\sigma}\right)^2\right\}.$$
+
+We denote the distribution by $N(\mu,\sigma^2)$.
+
+:::
+:::::
+
+## Normal distribution {.center .half-title}
+
+:::: {.column width="45%"}
+::: {.note}
+
+Normal distribution, or Gaussian distribution, is central in probability theory
+and statistics.
+
+:::
+::: {.note}
+
+It is often used to model observational errors. 
+
+:::
+::: {.note}
+
+Normal distributions have a symmetric shape around its centre.
+
+$\mu$ controls the center of the distribution (location) while the $\sigma$ controls
+the spread of the distribution (shape). 
+
+:::
+::::
+::::: {.full-height .right}
+
+$$X_{\mu,\sigma} \sim N(\mu, \sigma^2)$$
+
+
+```{r message=FALSE}
+#| layout-ncol: 1
+#| fig-asp: .4
+normalx <- tibble(x = seq(-5, 5, by = .001))
+ggplot(normalx) +
+  theme_classic() +
+  geom_function(aes(x = x, color = "paste('N(',0,',',1^2,')')"), 
+                fun = dnorm) +
+  geom_function(aes(x = x, color = "paste('N(',2,',',1^2,')')"), 
+                fun = dnorm, args = list(mean = 2)) +
+  geom_function(aes(x = x, color = "paste('N(',0,',',0.5^2,')')"), 
+                fun = dnorm, args = list(sd = .5)) +
+  geom_function(aes(x = x, color = "paste('N(',-2,',',2^2,')')"), 
+                fun = dnorm, args = list(mean = -2, sd = 2)) +
+  scale_colour_discrete(name = NULL, labels = scales::parse_format(),
+                        guide = guide_legend(nrow = 2)) +
+  labs(x = NULL, y = NULL, title = expression(f[X])) +
+  scale_y_continuous(breaks = c(0, 1)) +
+  theme(
+    title = element_text(size = 40),
+    legend.text = element_text(size = 18),
+    legend.key.size = unit(36, "pt"),
+    legend.position = c(.8, 1),
+    legend.direction = "horizontal",
+    axis.text = element_text(size = 36),
+    axis.line = element_line(size = 1.2),
+    axis.ticks = element_blank()
+  )
+
+ggplot(normalx) +
+  theme_classic() +
+  geom_function(aes(x = x, color = "paste('N(',0,',',1^2,')')"), 
+                fun = pnorm) +
+  geom_function(aes(x = x, color = "paste('N(',2,',',1^2,')')"), 
+                fun = pnorm, args = list(mean = 2)) +
+  geom_function(aes(x = x, color = "paste('N(',0,',',0.5^2,')')"), 
+                fun = pnorm, args = list(sd = .5),
+                show.legend = FALSE) +
+  geom_function(aes(x = x, color = "paste('N(',-2,',',2^2,')')"), 
+                fun = pnorm, args = list(mean = -2, sd = 2),
+                show.legend = FALSE) +
+  scale_colour_discrete(name = NULL) +
+  labs(x = NULL, y = NULL, title = expression(F[X])) +
+  scale_y_continuous(breaks = c(0, 1)) +
+  theme(
+    title = element_text(size = 40),
+    legend.position = "none",
+    axis.text = element_text(size = 36),
+    axis.line = element_line(size = 1.2),
+    axis.ticks = element_blank()
+  )
+```
+
+:::::
+
+## Standard normal distribution {.center .half-title}
+
+:::: {.column width="45%"}
+
+::: {.note}
+
+Standard normal distribution is a special case of normal distribution.
+
+:::
+::: {.note .fragment}
+
+We can transform any normal random variable
+$X\sim N(\mu, \sigma^2)$ to $Z$ by
+$$Z = \frac{X-\mu}{\sigma}.$$
+
+:::
+::::
+::::: {.full-height .right}
+::: {.definition}
+
+A normal distribution with $\mu=0$ and $\sigma^2=1$ is called the **standard normal distribution**. 
+
+We often denote a standard normal random variable by 
+$Z$, $Z\sim N(0,1)$, its pdf with $\phi$, and its cdf with $\Phi$.
+
+$$\phi(z) = \frac{1}{\sqrt{2\pi}}e^{-\frac{1}{2}z^2}$$
+
+$$\Phi(a) = \int_{-\infty}^a\frac{1}{\sqrt{2\pi}} e^{-\frac{1}{2}z^2}dz$$
+
+:::
+
+:::::
+
+
+## Standard normal distribution {.center .half-title}
+
+:::: {.column width="45%"}
+
+::: {.note}
+
+There is no explicit solution for $F(a)=\int_{-\infty}^a f(a) dx$.
+
+:::
+::: {.note .fragment}
+
+To compute probabilities for any normal random variable,
+we can 
+
+a. transform the variable to $Z$ and use a look-up table for $\Phi$ (sometimes $1-\Phi$), or
+b. use R or similar.
+
+:::
+::::
+::::: {.full-height .right}
+
+$$Z = \frac{X-\mu}{\sigma}.$$
+
+```{r}
+#| fig-asp: .4
+ggplot(normalx) +
+  theme_classic() +
+  geom_function(aes(x = x, color = "Z"), 
+                fun = dnorm) +
+  geom_function(aes(x = x, color = "X"), 
+                fun = dnorm, args = list(mean = 2, sd = 1.5)) +
+  scale_colour_discrete(name = NULL, guide = guide_legend(nrow = 2)) +
+  labs(x = NULL, y = NULL, title = expression(f)) +
+  scale_y_continuous(breaks = c(0, 1)) +
+  scale_x_continuous(breaks = c(0, 2, 3.5), 
+                     labels = c(0, expression(mu), expression(mu+sigma))) +
+  theme(
+    title = element_text(size = 40),
+    legend.text = element_text(size = 20),
+    legend.key.size = unit(36, "pt"),
+    legend.position = c(.9, 1),
+    legend.direction = "horizontal",
+    axis.text = element_text(size = 36),
+    axis.line = element_line(size = 1.2),
+    axis.ticks = element_blank()
+  )
+
+ggplot(normalx) +
+  theme_classic() +
+  geom_function(aes(x = x, color = "Z"), 
+                fun = pnorm) +
+  geom_function(aes(x = x, color = "X"), 
+                fun = pnorm, args = list(mean = 2, sd = 1.5)) +
+  scale_colour_discrete(name = NULL) +
+  labs(x = NULL, y = NULL, title = expression(F)) +
+  scale_y_continuous(breaks = c(0, 1)) +
+  scale_x_continuous(breaks = c(0, 2, 3.5), 
+                     labels = c(0, expression(mu), expression(mu+sigma))) +
+  theme(
+    title = element_text(size = 40),
+    legend.position = "none",
+    axis.text = element_text(size = 36),
+    axis.line = element_line(size = 1.2),
+    axis.ticks = element_blank()
+  )
+```
+
+:::::
+
+## Example: Computing probabilities of a normal random variable
+
+:::::: {.columns}
+::::: {.column width="30%"}
+
+Suppose $X\sim N(1, 4^2)$. Find
+
+a. $P(X > 2)$
+b. $P(X\le 0)$
+c. $q_{0.25}$
+
+:::::
+::::: {.column width="10%"}
+:::::
+::::: {.column width="60%"}
+![normal table](img/normaltable.png)
+:::::
+::::::
+
+## $X\sim N(1, 4^2)$
+
+:::::: {.columns}
+::::: {.column width="30%"}
+
+$$P(X > 2)$$
+
+::: {.incremental .nobullet}
++  $= P(X\ge2)$ 
+:::
+
+::: {.fragment .note}
+$P(X=2)=0$
+:::
+
+::: {.incremental .nobullet}
++  $= P\left(\frac{X-1}{4}\ge\frac{2-1}{4}\right)$
++  $= P\left(Z\ge\frac{1}{4}\right)$
++  $\approx 0.4013$
+:::
+:::::
+::::: {.column width="10%"}
+:::::
+::::: {.column width="60%"}
+![normal table](img/normaltable.png)
+:::::
+::::::
+
+## $X\sim N(1, 4^2)$
+
+:::::: {.columns}
+::::: {.column width="30%"}
+
+$$P(X > 2)$$
+
+::: {.nobullet}
++  $= P(X\ge2)$ 
+:::
+
+::: {.note}
+$P(X=2)=0$
+:::
+
+::: {.nobullet}
++  $= P\left(\frac{X-1}{4}\ge\frac{2-1}{4}\right)$
++  $= P\left(Z\ge\frac{1}{4}\right)$
++  $\approx 0.4013$
+:::
+
+:::::
+::::: {.column width="10%"}
+:::::
+::::: {.column width="60%"}
+
+```{r}
+#| echo: true
+1 - pnorm(1/4) # standard normal
+1 - pnorm(2, mean = 1, sd = 4) # normal with mu 1 and sigma 4
+```
+
+:::::
+::::::
+
+
+## $X\sim N(1, 4^2)$
+
+:::::: {.columns}
+::::: {.column width="30%"}
+
+$$P(X \le 0)$$
+
+::: {.incremental .nobullet}
++  $= P(X\le0)$ 
++  $= P\left(Z\le-\frac{1}{4}\right)$
++  $= P\left(Z\ge\frac{1}{4}\right)$
+:::
+::: {.fragment .note}
+$Z$ is symmetric around $0$.
+:::
+::: {.incremental .nobullet}
++  $\approx 0.4013$
+:::
+:::::
+::::: {.column width="10%"}
+:::::
+::::: {.column width="60%"}
+![normal table](img/normaltable.png)
+:::::
+::::::
+
+## $X\sim N(1, 4^2)$
+
+:::::: {.columns}
+::::: {.column width="30%"}
+
+$$P(X \le 0)$$
+
+::: {.nobullet}
++  $= P(X\le0)$ 
++  $= P\left(Z\le-\frac{1}{4}\right)$
++  $= P\left(Z\ge\frac{1}{4}\right)$
+:::
+::: {.note}
+$Z$ is symmetric around $0$.
+:::
+::: {.nobullet}
++  $\approx 0.4013$
+:::
+
+
+:::::
+::::: {.column width="10%"}
+:::::
+::::: {.column width="60%"}
+
+```{r}
+#| echo: true
+pnorm(-1/4) # standard normal
+pnorm(0, mean = 1, sd = 4) # normal with mu 1 and sigma 4
+```
+
+:::::
+::::::
+
+## $X\sim N(1, 4^2)$
+
+:::::: {.columns}
+::::: {.column width="30%"}
+
+$$q_{0.25}$$
+
+::: {.incremental .nobullet}
++  $0.25= F(q_{0.25})=P(X\le q_{0.25})$ 
++  $0.25= P\left(Z\le \frac{q_{0.25} - 1}{4}\right)$ 
++  $0.25= P\left(Z\ge -\frac{q_{0.25} - 1}{4}\right)$ 
++  $\implies \frac{1-q_{0.25}}{4}\approx0.675$
++  $q_{0.25} = -1.7$
+:::
+:::::
+::::: {.column width="10%"}
+:::::
+::::: {.column width="60%"}
+![normal table](img/normaltable.png)
+:::::
+::::::
+
+## $X\sim N(1, 4^2)$
+
+:::::: {.columns}
+::::: {.column width="30%"}
+
+$$q_{0.25}$$
+
+::: {.nobullet}
++  $0.25= F(q_{0.25})=P(X\le q_{0.25})$ 
++  $0.25= P\left(Z\le \frac{q_{0.25} - 1}{4}\right)$ 
++  $0.25= P\left(Z\ge -\frac{q_{0.25} - 1}{4}\right)$ 
++  $\implies \frac{1-q_{0.25}}{4}\approx0.675$
++  $q_{0.25} = -1.7$
+:::
+:::::
+::::: {.column width="10%"}
+:::::
+::::: {.column width="60%"}
+
+```{r}
+#| echo: true
+1 - qnorm(0.75) * 4 # standard normal
+qnorm(0.25, mean = 1, sd = 4) # normal with mu 1 and sigma 4
+```
+
+:::::
+::::::
+
+# R worksheet
+
+## Install `learnr` and run R worksheet {.half-title}
+
+:::: {.column width="45%"}
+1.   Click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main) to install `learnr` on [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+
+2.   Follow [this link](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Frlesson04&urlpath=shiny%2Frlesson04%2F&branch=main) to open the worksheet
+::::
+
+:::: {.full-height .right}
+
+<br />
+<br />
+
+If you see an error, try:
+
+::: {.note}
+1. Log in to [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2. Find `rlesson04` from _Files_ pane
+3. Click _Run Document_ 
+:::
+
+Other steps you may try:
+
+::: {.note}
+1.  Remove any `.Rmd` and `.R` files on the home directory of [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2.  In RStudio, 
+    i. Click `Tools` > `Global Options`
+    ii. Uncheck _"Restore most recently opened project at startup"_
+3.  Run `install.packages("learnr")` in RStudio after the steps above or click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main)
+:::
+
+::::
+
+# Summary
+
+::::: {.columns}
+:::: {.column}
+:::: 
+:::: {.column}
+
++  Continuous random variables describe uncountable random outcomes using probabilities of intervals
++  Probability density function and cumulative distribution function uniquely define the behaviour of a random variable
++  Common continuous random variables include exponential and normal
++  Standard normal distribution is a special case of normal distribution
+
+::::
+:::::
+
+## Practice questions {.center}
+
+Chapter 5, [Dekking et al.](https://librarysearch.library.utoronto.ca/permalink/01UTORONTO_INST/14bjeso/alma991106910545806196)
+
++   Read Section 5.4
++   Quick Exercises 5.1, 5.6, 5.7
++   All exercises from the chapter
+
++   See a collection of corrections by the author [here](https://www.tudelft.nl/ewi/over-de-faculteit/afdelingen/applied-mathematics/applied-probability/education/mips)
+
+

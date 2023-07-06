@@ -1,0 +1,1908 @@
+---
+title: "Lecture 1: Outcomes, Events, and Probability"
+subtitle: "STA237: Probability, Statistics, and Data Analysis I"
+author: "Michael Jongho Moon"
+institute: "PhD Student, DoSS, University of Toronto"
+date: "May 8, 2023"
+date-format: full
+format:
+  revealjs:
+    width: 1280
+    height: 720
+    theme: [default, ../theme.scss]
+    css: "style.css"
+    footer: |
+      &copy; 2023. Michael J. Moon. University of Toronto. 
+      
+      Sharing, posting, selling, or using this material
+      outside of your personal use in this course is
+      <strong>NOT</strong> permitted under any circumstances.
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(fontawesome)
+library(ggplot2)
+knitr::opts_chunk$set(eval = TRUE)
+palette(RColorBrewer::brewer.pal(8, "Accent"))
+# plot(1:5, col = 1:5, cex = 2, pch = 16)
+```
+
+# Introduction to probability
+
+```{r}
+#| include: false
+#| evaluate: false
+library(opendatatoronto)
+boundary <- show_package("neighbourhoods")$id |>
+  list_package_resources() |>
+  filter(
+    tolower(format) == "shp",
+    grepl("4326", name),
+    !grepl("historical", name)
+  ) |>
+  slice(1) |>
+  select(id) |>
+  get_resource() 
+saveRDS(boundary, "data/boundary.rds")
+ttc_lines <- search_packages("TTC Subway Shapefiles")$id |>
+  list_package_resources() |>
+  select(id) |>
+  get_resource()
+saveRDS(ttc_lines, "data/ttc_lines.rds")
+# ttc delays
+ttc_delays <- show_package("996cfe8d-fb35-40ce-b569-698d51fc683b")$id |>
+  list_package_resources() |>
+  slice(9) |>
+  get_resource() 
+write_csv(ttc_delays, "data/ttc_delays.csv")
+# table(ttc_delays$`Min Delay` > 5)
+```
+
+
+```{r}
+#| include: false
+downtown_neighbourhoods <- c(
+  "University", "Annex", "Church-Wellesley",
+  "Bay-Cloverhill", "Yonge-Bay Corridor",
+  "Kensington-Chinatown", "Downtown Yonge East", "Moss Park",
+  "Wellington Place", "Harbourfront-CityPlace",
+  "St Lawrence-East Bayfront-The Islands",
+  "North St.James Town", "Moss Park", "Regent Park",
+  "Cabbagetown-South St.James Town"
+  )
+boundary <- readRDS("data/boundary.rds") |>
+  mutate(is_downtown = AREA_NA7 %in% downtown_neighbourhoods)
+ttc_geo <- read_csv("data/ttc_stations.csv") 
+ttc_lines <- readRDS("data/ttc_lines.rds") |>
+  mutate(RID = factor(RID))
+ttc_delays <- read_csv("data/ttc_delays.csv") |>
+  filter(
+    `Min Delay` > 5, 
+    Day %in% c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")
+  ) |>
+  mutate(
+    Station = str_replace(Station, " STATIO$", " STATION") |>
+      str_remove_all("( STATION).*$") |>
+      str_remove("( YU).*$") |>
+      str_remove(" (BD).*$") |>
+      str_remove(" (SRT).*$") |>
+      str_remove("\\s?-?DANFORTH LINE$") |>
+      str_replace("LAWERENCE", "LAWRENCE") |>
+      str_remove("-YONGE$"),
+    Station = if_else(Station == "SHEPPARD", "SHEPPARD-YONGE", Station),
+    Line = if_else(Station == "BATHURST", "BD", Line),
+    Line = if_else(Station == "BLOOR", "YU", Line),
+    Line = if_else(Station == "CASTLE FRANK", "BD", Line),
+    Line = if_else(Station == "COLLEGE", "YU", Line),
+    Line = if_else(Station == "EGLINTON", "YU", Line),
+    Line = if_else(Station == "QUEEN", "YU", Line),
+    Line = if_else(Station == "ROSEDALE", "YU", Line),
+    Line = if_else(Station == "SUMMERHILL", "YU", Line)
+  ) |>
+  group_by(Station, Line) |>
+  summarise(delays = n(), .groups = "drop") 
+ttc_stations <- ttc_geo |>
+  left_join(ttc_delays, by = c("Station", "Line")) |>
+  mutate(
+    RID = factor(case_match(
+      Line,
+      "YU" ~ 1,
+      "BD" ~ 2,
+      "SRT" ~ 3,
+      "SHP" ~ 4
+    )),
+    is_transfer = Station %in% c(
+      "YONGE", "BLOOR", "SHEPPARD-YONGE", "SPADINA", "ST GEORGE", "KENNEDY"
+    ),
+    nudge = if_else(is_transfer, .002 * (.5 - RID %in% c(2, 4)) , 0)
+  ) 
+mycommute <- c(
+  "SHEPPARD-YONGE", "YORK MILLS", "LAWRENCE", "EGLINTON", 
+  "DAVISVILLE", "ST CLAIR", "SUMMERHILL", "ROSEDALE", "BLOOR", 
+  "WELLESLEY", "COLLEGE", "QUUEN'S PARK", "DUNDAS", "ST PATRICK", 
+  "QUEEN", "OSGOODE", "KING", "ST ANDREW", "UNION"
+)
+downtown_stations <- c(
+  "BATHURST", "CHRISTIE", "DUPONT", "SPADINA", "ST GEORGE",
+  "BAY", "ROSEDALE", "YONGE", "BLOOR", "SHERBOURNE", "CASTLE FRANK",
+  "MUSEUM", "QUEEN'S PARK", "ST PATRICK", "OSGOODE", "ST ANDREW",
+  "UNION", "KING", "QUEEN", "DUNDAS", "COLLEGE", "WELLESLEY"
+)
+yonge_street <- c(
+  "FINCH", "NORTH YORK CTR", "SHEPPARD-YONGE", "YORK MILLS",
+  "LAWRENCE", "EGLINTON", "DAVISVILLE", "ST CLAIR", "SUMMERHILL",
+  "ROSEDALE", "BLOOR", "WELLESLEY", "COLLEGE", "DUNDAS",
+  "QUEEN", "KING"
+)
+```
+
+```{r}
+#| include: false
+ptemplate <- ggplot() +
+  theme_void() +
+  geom_sf(data = boundary |> filter(is_downtown), 
+          colour = NA, fill = "lightgrey") +
+  geom_sf(data = ttc_lines, aes(colour = RID)) +
+  scale_colour_manual(
+    guide = NULL, 
+    values = c(
+      `1` = "#ffcc33", `2` = "#009966", `3` = "#0099cc", `4` = "#993366"
+      )
+  ) +
+  theme(
+    legend.title = element_text(colour = "#696969", size = 20),
+    legend.text = element_text(size = 18)
+  )
+ptemplate_commute <- ggplot() +
+  theme_void() +
+  geom_sf(data = boundary |> filter(is_downtown), 
+          colour = NA, fill = "lightgrey") +
+  geom_sf(data = ttc_lines |> filter(RID != 1), 
+          linewidth = 1, colour = "black") +
+  geom_sf(data = ttc_lines |> filter(RID == 1), 
+          linewidth = 2, colour = "#ffcc33") +
+  scale_colour_manual(
+    guide = NULL, 
+    values = c(
+      `1` = "#ffcc33", `2` = "black", `3` = "black", `4` = "black"
+      )
+  ) +
+  coord_sf(ylim = c(43.612860, 43.763306),
+           xlim = c(-79.4646, -79.3505)) +
+  theme(
+    legend.title = element_text(colour = "#696969", size = 20),
+    legend.text = element_text(size = 18)
+  )
+psubway <- ptemplate +
+  geom_point(
+    data = ttc_stations |> filter(RID == 1, Station %in% mycommute), 
+    aes(x = Lon, y = Lat, colour = RID, size = delays)
+  ) +
+  geom_sf_text(
+    data = sf::st_centroid(
+      boundary |> filter(AREA_NA7 == "St Lawrence-East Bayfront-The Islands")
+    ), 
+    aes(label = "Downtown Toronto"), size = 7, hjust = -.3, vjust = 1,
+    colour = "#696969"
+  )
+```
+
+## {}
+
+::::: {.columns}
+:::: {.column}
+
+At which station will I experience the next subway delay during my commute?
+
+<br/>
+
+::: {.incremental .nobullet}
++  `r fontawesome::fa("train-subway", prefer_type = "solid", height = "3em")`&nbsp;&nbsp; _Definitely Eglinton._ 
++  `r fontawesome::fa("train-subway", prefer_type = "solid", height = "2em")`&nbsp;&nbsp;&nbsp; _Probably Bloor.._ 
++  `r fontawesome::fa("train-subway", prefer_type = "solid", height = "1.5em")`&nbsp;&nbsp;&nbsp; _Maybe Union..._ 
++  `r fontawesome::fa("clover", height = "1.5em", fill = "darkgreen")`&nbsp; _None of them. I am just too lucky._ 
+:::
+
+::: {.fragment}
+
+In plain language, _definitely_, _probably_, and _maybe_ express 
+[a degree of uncertainty]{.accent-one}
+or [a degree of belief]{.accent-one}.
+
+:::
+
+::::
+:::: {.column}
+
+```{r fig.asp=.8}
+#| message: false
+#| warning: false
+#| fig-cap: "Number of TTC delays longer than 5 min in 2022 along my commute."
+psubway +
+  scale_size_continuous(
+    name = "Number of delays\nlonger than 5 min\non week days\nin 2022", 
+    range = c(1, 7.5),
+    guide = guide_legend(nrow = 1, label.position = "bottom")
+  ) +
+  labs(
+    caption = "Data retrieved from the City of Toronto Open Data Portal on May 1, 2023."
+  )
+```
+
+::::
+:::::
+
+## {}
+
+:::: {.columns}
+::: {.column}
+
++   We learn from what we observe to make conclusions about what we haven't observed
++   We have uncertainties about the conclusions and would like to study the uncertainties
++   We assign a numeric value, called **probability** to represent our level of certainty
+
+
+::: {.r-fit-text .fragment}
+In this class, we will study  
+how we describe uncertainty  
+with **probability**.
+:::
+:::
+::: {.column}
+
+```{r fig.asp=.8}
+#| message: false
+#| warning: false
+#| fig-cap: "Guess the next TTC subway delay."
+pguess <- psubway +
+  scale_size_continuous(
+    name = "Where will I experience\nmy next delay?", 
+    breaks = c(30, 60, 90),
+    labels = c("Unlikely", "", "Very likely"),
+    range = c(1, 7.5),
+    guide = guide_legend(nrow = 1, label.position = "bottom")
+  )
+pguess
+```
+
+
+:::
+::::
+
+## What probability is 
+
+::: {}
+### A discipline
+:::
+
+::: {.definition}
+Probability is the __science__ of uncertainty.
+
+_(Evans and Rosenthal)_
+:::
+  
+## What probability is 
+
+::: {}
+### An expression
+:::
+
+::: {.definition}
+a number between 0 and 1 that __expresses__ hows likely [an] event is to occur...
+
+_(Dekking et al.)_
+:::
+  
+::: {.definition}
+Another way of thinking about probability is in terms of [long-term] _relative frequency_.
+
+_(Evans and Rosenthal)_
+:::
+
+
+## {}
+
+:::: {.columns}
+::: {.column}
+
+### Probability in terms of relative frequency
+
+::: {.r-fit-text}
++  More frequent delays in the past,  
+more likely I will experience a delay
+
+
++  We assume TTC of tomorrow  
+is similar to that of yesterday
+:::
+:::
+::: {.column}
+
+```{r fig.asp=.8}
+#| message: false
+#| warning: false
+#| fig-cap: "Relative frequencies inform our beliefs."
+pguess
+```
+
+
+:::
+::::
+
+
+
+## Why we study probability {.center}
+
+:::: {.columns}
+::: {.column}
+::: {.r-fit-text}
+Probability is everywhere  
+and understanding  
+probability can help you...
+:::
+:::
+::: {.column width="5%"}
+:::
+::: {.column width="45%" .incremental}
+
++   plan your next subway trip
++   understand that launching the space shuttle _Challenger_ was a bad idea without launching it (Section 1.4 of Dekking et al.)
++   estimate the prevalence of COVID-19-infected individuals in Ontario communities from wastewater ([COVID-19 Wastewater Surveillance in Ontario](https://www.publichealthontario.ca/en/Data-and-Analysis/Infectious-Disease/COVID-19-Data-Surveillance/Wastewater), Public Health Ontario, 2023.)
+
+:::
+::::
+
+
+# Random experiment, outcomes and events
+
+## Definitions
+
+::::: {.columns}
+:::: {.column}
+:::{.definition}
+A **(random) experiment** is a
+mechanism/phenomenon that results in random or unpredictable
+**outcomes**.
+:::
+::::
+:::: {.column}
+:::{.fragment}
+The station where I experience my next TTC subway delay is the outcome.
+:::
+::::
+:::::
+
+::::: {.columns}
+:::: {.column}
+:::{.definition}
+A **sample space** is the collection of all
+possible outcomes from an experiment. It's often denoted $\Omega$ (Omega).
+:::
+::::
+:::: {.column}
+:::{.fragment}
+$$\Omega=\{\text{Sheppard}, \ldots, \text{Queen's Park}\}$$
+$$=\text{All stations along my commute}$$
+:::
+::::
+:::::
+
+::::: {.columns}
+:::: {.column}
+:::{.definition}
+An **event** is a subset of the sample space.
+:::
+::::
+:::: {.column}
+:::{.fragment}
+$$D=\{\text{Bloor}, \text{Wellesley}, \ldots, \text{Queen's Park}\}$$
+$$=\text{Stations in downtown along my commute}$$
+:::
+::::
+:::::
+  
+
+## Some basic set theory
+
+::::: {.columns}
+
+:::: {.column width="30%"}
+
+### Events
+
+Consider the following events.
+
+<br />
+
+[$A$]{.accent-one}: My next delay is in downtown Toronto.
+
+[$B$]{.accent-two}: My next delay is along Yonge St.
+
+::::
+:::: {.column width="35%"}
+
+```{r fig.asp=1}
+#| message: false
+#| warning: false
+#| fig-cap: "Event A."
+event_A <- ptemplate_commute +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute), 
+    aes(x = Lon, y = Lat), colour = "darkgrey", size = 4,
+  ) +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% downtown_stations, Station %in% mycommute), 
+    aes(x = Lon, y = Lat), size = 7, colour = palette()[1]
+  ) +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% downtown_stations, Station %in% mycommute), 
+    aes(x = Lon, y = Lat, colour = RID), size = 4
+  )
+event_A
+```
+
+::::
+:::: {.column width="35%"}
+
+```{r fig.asp=1}
+#| message: false
+#| warning: false
+#| fig-cap: "Event B."
+event_B <- ptemplate_commute +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute), 
+    aes(x = Lon, y = Lat), colour = "darkgrey", size = 4,
+  ) +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% yonge_street, Station %in% mycommute), 
+    aes(x = Lon, y = Lat), size = 7, colour = palette()[2]
+  ) +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% yonge_street, Station %in% mycommute), 
+    aes(x = Lon, y = Lat, colour = RID), size = 4
+  )
+event_B
+```
+
+::::
+:::::
+
+## Some basic set theory
+
+:::::::: {.columns}
+
+::::::: {.column width="30%"}
+
+### Events
+
+Consider the following events.
+
+<br />
+
+[$A$]{.accent-one}: My next delay is in downtown Toronto.
+
+[$B$]{.accent-two}: My next delay is along Yonge St.
+
+:::::::
+::::::: {.column width="70%"}
+
+### Venn Diagrams
+
+:::::: {.columns}
+:::::: {.column width="45%"}
+
+::::: {.venn .center .im}
+::: {.event-b .outer .white}
+:::
+::: {.event-b .outer .shell}
+:::
+::: {.label-b}
+[$A$]{.accent-one}
+:::
+:::::
+
+
+::::::
+:::::: {.column width="45%"}
+
+::::: {.venn .center .im}
+::: {.event-b .outer .white}
+:::
+::: {.event-b .outer .shell}
+:::
+::: {.label-b}
+[$B$]{.accent-two}
+:::
+:::::
+
+::::::
+::::::
+
+:::::::
+::::::::
+
+## {}
+
+::::::: {.columns}
+
+:::::: {.column width="50%"}
+
+```{r fig.asp=.8}
+#| message: false
+#| warning: false
+#| fig-cap: "Event A and B."
+ptemplate_commute +
+   geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute), 
+    aes(x = Lon, y = Lat), colour = "darkgrey", size = 5,
+  ) +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute, 
+             Station %in% downtown_stations, Station %in% yonge_street), 
+    aes(x = Lon, y = Lat), size = 7, colour = palette()[5]
+  ) +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute, 
+             Station %in% downtown_stations, Station %in% yonge_street), 
+    aes(x = Lon, y = Lat, colour = RID), size = 4
+  )
+```
+
+::::::
+:::::: {.column width="50%"}
+
+### Intersection
+
+$$A\cap B$$
+
+::::: {.venn .center}
+::: {.event-a .outer .white}
+:::
+::: {.event-b .outer .white}
+:::
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+:::: {.intersection-a}
+::: {.intersection-b .fill}
+:::
+::::
+::: {.label-a}
+$A$
+:::
+::: {.label-b}
+$B$
+:::
+:::::
+
++  Represents the event that includes outcomes from event [$A$ __and__ $B$]{.accent-five}
++  A delay in downtown **AND** on Yonge St 
+
+::::::
+:::::::
+
+## {}
+
+::::::: {.columns}
+
+:::::: {.column width="50%"}
+
+```{r fig.asp=.8}
+#| message: false
+#| warning: false
+#| fig-cap: "Event A or B."
+ptemplate_commute +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute), 
+    aes(x = Lon, y = Lat), colour = "darkgrey", size = 5,
+  ) +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute), 
+    aes(x = Lon, y = Lat), size = 7, colour = palette()[5]
+  ) +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute), 
+    aes(x = Lon, y = Lat, colour = RID), size = 4
+  )
+```
+
+::::::
+:::::: {.column width="50%"}
+
+
+### Union
+
+$$A\cup B$$
+
+::::: {.venn .center}
+::: {.event-a .outer .fill}
+:::
+::: {.event-b .outer .fill}
+:::
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+:::: {.intersection-a}
+::: {.intersection-b}
+:::
+::::
+::: {.label-a}
+$A$
+:::
+::: {.label-b}
+$B$
+:::
+:::::
+
++  Represents the event that includes outcomes from event [$A$ __or__ $B$]{.accent-five}
++  A delay in downtown **OR** on Yonge St.
+
+::::::
+:::::::
+
+
+## {}
+
+::::::: {.columns}
+
+:::::: {.column width="50%"}
+
+```{r fig.asp=.8}
+#| message: false
+#| warning: false
+#| fig-cap: "Event A complement."
+ptemplate_commute +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute), 
+    aes(x = Lon, y = Lat), colour = "darkgrey", size = 5,
+  ) +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute, !Station %in% downtown_stations), 
+    aes(x = Lon, y = Lat), size = 7, colour = palette()[5]
+  ) +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute, !Station %in% downtown_stations), 
+    aes(x = Lon, y = Lat, colour = RID), size = 4
+  )
+```
+
+::::::
+:::::: {.column width="50%"}
+
+### Complement
+
+$$A^c$$
+
+::::: {.venn .center .fill}
+::: {.event-a .outer .white}
+:::
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+:::: {.intersection-a}
+::: {.intersection-b}
+:::
+::::
+::: {.label-a}
+[$A$]{.white-text}
+:::
+::: {.label-b}
+[$B$]{.white-text}
+:::
+:::::
+
++  Represents the event that [**excludes** outcomes from $A$]{.accent-five}
++  A delay that is **NOT** in downtown
+
+::::::
+:::::::
+
+
+## {}
+### Example: Niether $A$ nor $B$
+
+How would you write an event that includes outcomes that belong to neither $A$ nor $B$ using set notation?
+
+<br />
+
+::: {.fragment}
+_We could write..._
+:::
+:::: {.columns}
+::: {.column width="45%" .fragment}
+
+a delay that is 
+
+NOT $(\cdot^c)$
+
+&nbsp;&nbsp;in downtown $(A)$
+
+&nbsp;&nbsp;OR $(\cup)$
+
+&nbsp;&nbsp;on Yonge St. $(B)$.
+
+:::
+
+
+::: {.column width="10%"}
+
+:::
+
+
+::: {.column width="45%" .fragment}
+
+a delay that is 
+
+NOT $(\cdot^c)$ in downtown $(A)$
+
+AND $(\cap)$
+
+NOT $(\cdot^c)$ on Yonge St. $(B)$.
+
+:::
+::::
+
+:::: {.columns .fragment}
+::: {.column width="40%"}
+$$(A\cup B)^c$$
+:::
+::: {.column width="20%"}
+$$=$$
+:::
+::: {.column width="40%"}
+$$A^c \cap B^c$$
+:::
+::::
+
+## {.center}
+### De Morgan's Laws
+
+For any two events $A$ and $B$, we have
+
+::::::: {.columns}
+:::::: {.column width="45%" .fragment}
+
+$$(A\cup B)^c = A^c \cap B^c$$
+
+::::: {.venn .fill .center}
+::: {.event-a .outer .white}
+:::
+::: {.event-b .outer .white}
+:::
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+
+:::: {.intersection-a .white}
+::: {.intersection-b .white}
+:::
+::::
+
+::: {.label-a}
+[$A$]{.white-text}
+:::
+::: {.label-b}
+[$B$]{.white-text}
+:::
+:::::
+
+::::::
+:::::: {.column width="10%" .fragment}
+<br/><br/>
+and
+::::::
+:::::: {.column width="45%" .fragment}
+
+
+$$(A\cap B)^c = A^c\cup B^c.$$
+
+::::: {.venn .fill .center}
+::: {.event-a .outer}
+:::
+::: {.event-b .outer}
+:::
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+
+:::: {.intersection-a}
+::: {.intersection-b .white}
+:::
+::::
+
+::: {.label-a}
+[$A$]{.white-text}
+:::
+::: {.label-b}
+[$B$]{.white-text}
+:::
+:::::
+
+::::::
+:::::::
+
+
+## {}
+### Example: Niether $A$ nor $B$
+
+::::::: {.columns}
+
+:::::: {.column width="50%" .fragment}
+
+```{r fig.asp=.8}
+#| message: false
+#| warning: false
+#| fig-cap: "Empty set."
+ptemplate_commute +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute), 
+    aes(x = Lon, y = Lat), colour = "darkgrey", size = 5,
+  ) 
+```
+
+::::::
+:::::: {.column width="50%"}
+
+:::: {.column width="40%"}
+::: {.r-fit-text}
+What is left?
+:::
+::::
+
+::: {.fragment}
+$$A^c \cap B^c = \{\}= \emptyset,$$ 
+an **empty set**.
+:::
+
+::::: {.venn .center .empty .fragment}
+::: {.event-a .outer .white}
+:::
+::: {.event-b .outer .white}
+:::
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+:::: {.intersection-a .white}
+::: {.intersection-b}
+:::
+::::
+::: {.label-a}
+$A$
+:::
+::: {.label-b}
+$B$
+:::
+:::::
+
+::::::
+:::::::
+
+
+## {}
+### Example: Exactly one of $A$ and $B$
+
+::::::: {.columns}
+
+:::::: {.column width="50%"}
+
+```{r fig.asp=.8}
+#| message: false
+#| warning: false
+#| fig-cap: "Exactly one of A or B."
+ptemplate_commute +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute), 
+    aes(x = Lon, y = Lat), colour = "darkgrey", size = 5,
+  ) +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute, 
+             !Station %in% yonge_street, 
+             Station %in% downtown_stations), 
+    aes(x = Lon, y = Lat), size = 7, colour = palette()[5]
+  ) +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute, 
+             !Station %in% yonge_street, 
+             Station %in% downtown_stations), 
+    aes(x = Lon, y = Lat, colour = RID), size = 4
+  ) +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute, 
+             Station %in% yonge_street, 
+             !Station %in% downtown_stations), 
+    aes(x = Lon, y = Lat), size = 7, colour = palette()[5]
+  ) +
+  geom_point(
+    data = ttc_stations |> 
+      filter(RID == 1, Station %in% mycommute, 
+             Station %in% yonge_street, 
+             !Station %in% downtown_stations), 
+    aes(x = Lon, y = Lat, colour = RID), size = 4
+  )
+```
+
+::::::
+:::::: {.column width="50%"}
+
+An event that includes outcomes that belong to one of $A$ or $B$, but not both.
+
+::::: {.venn .center .fragment}
+::: {.event-a .outer .fill}
+:::
+::: {.event-b .outer .fill}
+:::
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+:::: {.intersection-a .white}
+::: {.intersection-b .white}
+:::
+::::
+::: {.label-a}
+$A$
+:::
+::: {.label-b}
+$B$
+:::
+:::::
+
+::::::
+:::::::
+
+## {}
+### Example: Exactly one of $A$ and $B$
+
+::::::: {.columns}
+:::::: {.column width="30%"}
+
+How can we represent the event using set notation?
+
+::::: {.venn .center}
+::: {.event-a .outer .fill}
+:::
+::: {.event-b .outer .fill}
+:::
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+:::: {.intersection-a .white}
+::: {.intersection-b .white}
+:::
+::::
+::: {.label-a}
+$A$
+:::
+::: {.label-b}
+$B$
+:::
+:::::
+:::::: 
+
+:::::: {.column width="35%" .fragment}
+
+**Remove**
+
+::::: {.venn .center}
+::: {.event-a .outer}
+:::
+::: {.event-b .outer}
+:::
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+:::: {.intersection-a}
+::: {.intersection-b .fill}
+:::
+::::
+::: {.label-a}
+$A$
+:::
+::: {.label-b}
+$B$
+:::
+:::::
+
+**from**
+
+::::: {.venn .center}
+::: {.event-a .outer .fill}
+:::
+::: {.event-b .outer .fill}
+:::
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+:::: {.intersection-a}
+::: {.intersection-b}
+:::
+::::
+::: {.label-a}
+$A$
+:::
+::: {.label-b}
+$B$
+:::
+:::::
+
+
+
+::::::
+:::::: {.column width="35%"}
+
+::: {.incremental}
++  To "remove" $A\cup B$, we can find the interesction, $\cap$ with the complement, $\left(A\cup B\right)^c$.
++  We can express the event $$A\cup B \cap (A \cap B)^c$$ $$=$$ $$A\cup B \cap (A^c \cup B^c)$$
+:::
+
+
+::::::
+
+:::::::
+
+
+## {}
+### Other useful terminologies and properties to remember
+
+::::::: {.columns}
+:::::: {.column width="35%"}
+
+::: {.text-center}
+_Disjoint $A$ and $B$_
+
+_(mutually exclusive)_
+:::
+
+::::: {.venn .center .me}
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+
+::: {.label-a}
+A
+:::
+::: {.label-b}
+B
+:::
+:::::
+
+$$A\cap B=\{\}=\emptyset$$
+
+::::::
+:::::: {.column width="35%"}
+
+::: {.text-center}
+_$A$ implies $B$_
+
+_$A$ is a subset of $B$_
+:::
+
+::::: {.venn .center .im}
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+
+::: {.label-a}
+A
+:::
+::: {.label-b}
+B
+:::
+:::::
+
+$$A\cap B=A$$
+
+$$A\subset B$$
+
+::::::
+:::::: {.column width="30%"}
+
+::: {.r-fit-text}
+
+#### Communicative
+
+$$A\cup B=B\cup A$$
+$$A\cap B=B\cap A$$
+
+#### Associative
+
+$$(A\cup B)\cup C=A\cup(B\cup C)$$
+$$(A\cap B)\cap C=A\cap(B\cap C)$$
+
+#### Distributive
+
+$$A\cup (B\cap C)=(A\cup B) \cap (A\cup C)$$
+$$A\cap (B\cup C)=(A\cap B) \cup (A\cap C)$$
+
+:::
+::::::
+:::::::
+
+# Probability 
+
+:::: {.full-height .right}
+
+```{mermaid}
+flowchart TD
+    event((<font size=5em>Event))---fn(<font color=#386CB0><font size=5em>Probability<br/>Function)-->value(<font color=#386CB0><font size=5em>Probability<br />Value)
+    style event fill: #ffffff, stroke: #696969, stroke-width: 2px;
+    style fn fill: #ffffff, stroke: none, font-size 2em;
+    style value fill: #ffffff, stroke: #696969, stroke-width: 2px;
+```
+
+::::
+
+## Probability function {.center}
+
+:::::: {.definition}
+A __probability function__ $P$ defined on a <b class="accent-three">finite</b> sample space $\Omega$ assigns each event $A$ in $\Omega$ a number $P(A)$ such that
+
+::::: {.columns}
+:::: {.column .r-fit-text}
+i) $P(A) \ge 0$;  
+ii) $P(\Omega) = 1$; and  
+iii) $P(A\cup B) = P(A) + P(B)$  
+if $A$ and $B$ are disjoint.
+:::: 
+:::: {.column}
+
+<br/>
+(axioms of probability)
+::::
+:::::
+
+The number $P(A)$ is called the __probability__ that $A$ occurs.
+::::::
+
+
+## Probability function {.center}
+
+::::::: {.definition}
+A __probability function__ $P$ defined on an <b class="accent-five">infinite</b> sample space $\Omega$ assigns each event $A$ in $\Omega$ a number $P(A)$ such that
+
+::::: {.columns}
+:::: {.column .r-fit-text}
+i) $P(A) \ge 0$;  
+ii) $P(\Omega) = 1$; and  
+iii) $P(A_1\cup A_2 \cup A_3 \cup \cdots)$ $= P(A_1) + P(A_2) + P(A_3) + \cdots$  
+if $A_1$, $A_2$, $A_3$, ... are disjoint.
+:::: 
+:::: {.column}
+
+<br/>
+(axioms of probability)
+::::
+:::::
+
+The number $P(A)$ is called the __probability__ that $A$ occurs. 
+::::::
+
+
+## {}
+### Example: My next TTC delay
+
+:::::: {.columns}
+::::: {.column}
+
+```{r fig.asp=.8}
+#| message: false
+#| warning: false
+#| fig-cap: "Higher relative frequencies, higher probability."
+pprob <- ptemplate_commute +
+  geom_point(
+    data = ttc_stations |> filter(RID == 1, Station %in% mycommute), 
+    aes(x = Lon, y = Lat, colour = RID, size = delays)
+  ) +
+  scale_size_continuous(
+    name = "Number of delays\nlonger than 5 min\non week days\nin 2022", 
+    breaks = c(30, 60, 90),
+    range = c(3, 12),
+    guide = guide_legend(nrow = 1, label.position = "bottom")
+  )
+pprob
+```
+
+:::::
+::::: {.column}
+
+:::: {.incremental .nobullet}
+
++  $P\left(\left\{\text{Eglinton}\right\}\right) > P\left(\left\{\text{Lawrence}\right\}\right)$
++  $P\left(\left\{\text{Eglinton}\right\}\right) + P\left(\left\{\text{Lawrence}\right\}\right)$ $= P\left(\left\{\text{Eglinton, Lawrence}\right\}\right)$
+
+::: {.note .fragment}
+$\left\{\text{Eglinton, Lawrence}\right\}$ $=\left\{\text{Eglinton}\right\}\cup\left\{\text{Lawrence}\right\}$ 
+
+The event that the next delay is at Eglinton **or** Lawrence
+:::
+
++  $P\left(\text{All stations}\right)=1$
+
+::: {.note .fragment}
+assuming I will eventually experience a delay at one of the stations
+:::
+
+::::
+
+:::::
+::::::
+
+
+## Probability and set operations
+
+:::::::: {.columns}
+
+::::::: {.column width="35%" .fragment}
+
+### Probability of a union
+
+Consider $P(A)$
+
+::::: {.venn}
+::: {.event-a .outer .fill}
+:::
+::: {.event-b .outer}
+:::
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+:::: {.intersection-a .fill}
+::: {.intersection-b .fill}
+:::
+::::
+::: {.label-a}
+$A$
+:::
+::: {.label-b}
+$B$
+:::
+:::::
+
+:::::::
+::::::: {.column width="65%" .fragment}
+
+For any two events $A$ and $B$, we can decompose each into two <i class="accent-three">disjoint</i> subsets.
+
+:::::: {.column width="50%"}
+
+::::: {.venn}
+::: {.event-a .outer .fill}
+:::
+::: {.event-b .outer .white}
+:::
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+::: {.label-a}
+$A$
+:::
+::: {.label-b}
+$B$
+:::
+:::::
+
+::::: {.venn}
+::: {.event-a .outer}
+:::
+::: {.event-b .outer}
+:::
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+:::: {.intersection-a .white}
+::: {.intersection-b .fill}
+:::
+::::
+::: {.label-a}
+$A$
+:::
+::: {.label-b}
+$B$
+:::
+:::::
+
+$$(A\cap B^c)\cup (A\cap B)$$
+
+::::::
+:::::: {.column width="40%" .fragment}
+
+::: {.r-fit-text}
+$$P(A)$$
+$$=P(A\cap B^c) + P(A\cap B)$$
+:::
+
+::: {.note}
+probability axiom iii
+:::
+
+::::::
+:::::::
+::::::::
+
+## {}
+### Example: My next TTC delay
+
+:::::::: {.columns}
+
+::::::: {.column width="30%"}
+
+::: {.r-fit-text}
+Recall events $A$ and $B$.
+
+$A$: My next delay is in downtown Toronto.
+
+$B$: My next delay is along Yonge St.
+
+Assume I will eventually experience a delay at a TTC station during my commute.
+
+::: {.note .accent-five .fragment}
+$\implies P(A\cup B)=P(\Omega)=1$
+
+(probability axiom ii)
+:::
+:::
+:::::::
+::::::: {.column width="70%"}
+
+Suppose
+
+:::::: {.columns}
+
+:::: {.column width="35%"}
+
+$$P(A)={4}/{10}$$
+
+```{r fig.asp=1}
+#| message: false
+#| warning: false
+#| fig-cap: "Event A."
+event_A
+```
+
+::::
+:::: {.column width="35%"}
+
+$$P(B)={2}/{3}$$
+
+```{r fig.asp=1}
+#| message: false
+#| warning: false
+#| fig-cap: "Event B."
+event_B
+```
+
+::::
+::::::
+
+:::::::
+::::::::
+
+$$P(A\cap B)=?$$
+
+## {}
+### Example: My next TTC delay
+
+:::::::: {.columns}
+
+::::::: {.column width="30%"}
+
+$$P(A)={4}/{10}$$
+$$P(B)={2}/{3}$$
+$$P(A\cup B)=1$$
+
+:::::::
+::::::: {.column width="70%"}
+:::: {.r-fit-text}
+::: {.fragment}
+$P(A)=$[$P(A\cap B^c)$]{.accent-one}$+$[$P(A\cap B)$]{.accent-two}
+
+$P(B)=$[$P(A^c\cap B)$]{.accent-three}$+$[$P(A\cap B)$]{.accent-two}
+
+$P(A\cup B)=$[$P(A\cap B^c)$]{.accent-one}$+$[$P(A^c\cap B)$]{.accent-three}$+$[$P(A\cap B)$]{.accent-two}
+:::
+
+::: {.fragment}
+
+$\implies$
+
+$P(A) + P(B)=$[$P(A\cap B^c)$]{.accent-one}$+$[$P(A^c\cap B)$]{.accent-three}$+2\cdot$[$P(A\cap B)$]{.accent-two}
+
+$P(A) + P(B)=P(A \cup B)+$[$P(A\cap B)$]{.accent-two}
+
+:::
+
+::: {.fragment}
+
+$\implies$
+
+[$P(A\cap B)$]{.accent-two}$=P(A)+P(B)-P(A\cup B)$
+
+$\phantom{P(A\cap B)}=4/10 + 2/3 - 1$
+
+$\phantom{P(A\cap B)}=1/15$
+
+:::
+::::
+:::::::
+::::::::
+
+
+## {}
+### Probability of a union
+
+Consider $P(A\cup B)$
+
+:::::::: {.columns}
+
+::::::: {.column width="50%"}
+
+::::: {.venn .center}
+::: {.event-a .outer .fill}
+:::
+::: {.event-b .outer .fill}
+:::
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+:::: {.intersection-a .fill}
+::: {.intersection-b .fill}
+:::
+::::
+::: {.label-a}
+$A$
+:::
+::: {.label-b}
+$B$
+:::
+:::::
+
+:::::::
+::::::: {.column width="50%" .fragment}
+
+::::: {.venn .center}
+::: {.event-a .outer .fill}
+:::
+::: {.event-b .outer .fill-alt-bottom}
+:::
+::: {.event-a .outer .shell}
+:::
+::: {.event-b .outer .shell}
+:::
+:::: {.intersection-a .fill}
+::: {.intersection-b .fill .fill-alt-right}
+:::
+::::
+::: {.label-a}
+$A$
+:::
+::: {.label-b}
+$B$
+:::
+:::::
+
+$$(A\cap B^c)\cup (A\cap B)\cup (A^c\cap B)$$
+
+:::::::
+::::::::
+
+::: {.fragment}
+$$P(A\cup B)=P(A\cap B^c)+ P(A\cap B) + P(A^c\cap B)$$
+:::
+
+
+## {}
+
+### Probability of a complement
+
+:::::::: {.columns}
+
+::::::: {.column width="30%"}
+
+::::: {.venn .im .fill}
+:::::
+
+$$\Omega$$
+:::::::
+::::::: {.column width="5%" .fragment data-fragment-index="1"}
+
+:::::::
+::::::: {.column width="60%" .fragment data-fragment-index="1"}
+
+
+::::: {.venn .im}
+::: {.event-b .outer .fill}
+:::
+::: {.event-b .outer .shell}
+:::
+::: {.label-b}
+A
+:::
+:::::
+
+::::: {.venn .im .fill}
+::: {.event-b .outer .white}
+:::
+::: {.event-b .outer .shell}
+:::
+::: {.label-b}
+A
+:::
+:::::
+
+$$A\cup A^c$$
+:::::::
+::::::::
+
+. . .
+
+For any event $A$, we can decompose the sample space $\Omega$ into two 
+<i class="accent1">disjoint</i> subsets.
+
+. . .
+
+$$\implies P(\Omega)=P(A) + P(A^c)$$
+$$\implies P(A^c)=1-P(A)$$
+
+# Probability of equally likely outcomes
+
+## Calculating probability by counting {.center}
+
+:::: {.columns}
+::: {.column width="40%"}
+Applies <i class="accent1">only</i> when
+
++   all outcomes of the sample space are equally likely; and
++   $\Omega$ is finite.
+
+:::
+::: {.column .fragment}
+
+For any event $A$ of such sample space $\Omega$,
+
+$$P(A)=\frac{\text{number of outcomes that belong to }A}{\text{total number of outcomes in }\Omega}$$
+
+:::
+::::
+
+## {}
+### Example: Rolling a die
+
+<i class="fa fa-solid fa-dice fa-2xl"></i> Suppose you roll a fair die once. 
+
+$$A=\text{You roll an even number.}$$
+$$B=\text{You roll a number less than 3.}$$
+
+Compute the following probabilities.
+
+:::: {.columns}
+::: {.column width="30%"}
+$$P(A)$$
+:::
+::: {.column width="30%"}
+$$P(A\cap B)$$
+:::
+::: {.column width="30%"}
+$$P(A\cup B)$$
+:::
+::::
+
+:::: {.columns .fragment}
+::: {.column width="30%"}
+$$P\left(\left\{2,4,6\right\}\right)$$
+$$=3/6=1/2$$
+:::
+::: {.column width="30%"}
+$$P\left(\left\{2\right\}\right)$$
+$$=1/6$$
+:::
+::: {.column width="30%"}
+$$P\left(\left\{1,2,4,6\right\}\right)$$
+$$=4/6=2/3$$
+:::
+::::
+
+## Multiple experiments
+
+### Example: Rolling a die twice
+
+Suppose you roll the die twice <i class="fa fa-solid fa-dice"></i><i class="fa fa-solid fa-dice"></i>.
+
+<br />
+
+::: {.column width="40%"}
+Let $\Omega_1$ be the sample space for the first roll and $\Omega_2$ the sample space for the second. 
+
+We will denote the sample space of rolling the die twice with $\Omega$. 
+
+What is $\Omega$?
+:::
+
+## {.center}
+
+### Product of sample space
+
+
+In general, 
+
+$$\Omega=\Omega_1 \times \Omega_2=\left\{\left(\omega_1, \omega_2\right):\omega_1\in \Omega_1, \omega_2\in\Omega_2\right\}$$
+
+::: {.column width="50%" .fragment}
+That is, the sample space generated by observing multiple experiments is 
+a product of the individual sample spaces consisting of all
+combinations of outcomes of individual experiments.
+:::
+
+
+## {.center}
+### Example: Rolling a die twice
+
+::::: {.columns}
+:::: {.column width="40%"}
+
+What is $P\left(\left\{\left(1,6\right)\right\}\right)$?
+
+::::
+:::: {.column width="60%"}
+
+::: {.nobullet .incremental}
+
+::: {}
++ The number of possible outcomes in $\Omega$ is $6\times6=36$.
+:::
+::: {}
++ $\left\{\left(1,6\right)\right\}$ is an event with a single outcome.
+:::
+::: {}
++ $P\left(\left\{\left(1,6\right)\right\}\right)=1/36$.
+:::
+:::
+
+::::
+:::::
+
+## {}
+### Example: Drawing 5 cards from a deck
+
+:::::: {.columns}
+::::: {.column width="30%"}
+
+::: {.r-fit-text}
+In a standard deck of playing cards, there are 13 cards in each of the four suits:
+:::
+
+::: {.r-fit-text}
+[&#9824;]{.black-text} [&#9829;]{.red-text} [&#9827;]{.black-text} [&#9830;]{.red-text}
+:::
+
+::: {.r-fit-text}
+What is the probability of drawing  
+:::
+
+::: {.r-fit-text}
+[A&#9824;]{.black-text}, [K&#9824;]{.black-text}, [Q&#9824;]{.black-text}, [J&#9824;]{.black-text}, [10&#9824;]{.black-text}
+:::
+
+::: {.r-fit-text}
+consecutively from a standard deck in **the specific order**?
+:::
+:::::
+::::: {.column width="70%"}
+
+:::: {.incremental .nobullet}
+
+::: {}
++ What is the number of _uniquely ordered ways_ of drawing 5 cards from a deck of 52 cards?
+:::
+
+::: {}
++ $52\times51\times50\times49\times48 = 311,875,200$ ways
+:::
+
+::: {}
++ Or, $\frac{52!}{(52 - 5)!}$
+:::
+
+::: {}
++ $\implies P(${([A&#9824;]{.black-text}, [K&#9824;]{.black-text}, [Q&#9824;]{.black-text}, [J&#9824;]{.black-text}, [10&#9824;]{.black-text})}$)\approx$ 1/300 million.
+:::
+
+::::
+
+:::::
+::::::
+
+## Permutation
+
+:::::: {.columns}
+::::: {.column}
+
+::: {.definition}
+
+Any [ordered]{.accent-five} sequence of $n$ objects taken from a set of $N$ distinct objects is called a **permutation**. The number of possible permutations of size $n$ from $N$ objects is 
+
+$${}_NP_{n}=\frac{N!}{\left(N-n\right)!}.$$
+
+:::
+
+:::::
+::::: {.column .fragment}
+
+#### Examples
+
+::: {.incremental}
++  Selecting individuals from a baseball team of 12 for a starting lineup by position
++  Allocating 10 pre-construction condo units to a group of 7 applicants
++  Allocating 7 pre-construction condo units to a group of 10 applicants
++  Forming other "words" by rearranging letters in "MICHAEL"
+:::
+
+:::::
+::::::
+
+
+## {}
+### Example: Drawing 5 cards from a deck
+
+:::::: {.columns}
+::::: {.column width="30%"}
+
+::: {.r-fit-text}
+What is the probability of drawing  
+:::
+
+::: {.r-fit-text}
+[A&#9824;]{.black-text}, [K&#9824;]{.black-text}, [Q&#9824;]{.black-text}, [J&#9824;]{.black-text}, [10&#9824;]{.black-text}
+:::
+
+::: {.r-fit-text}
+consecutively from a standard deck in **any** order?
+:::
+:::::
+::::: {.column width="70%"}
+
+:::: {.incremental .nobullet}
+
+::: {}
++ What is the number of ways to order the 5 cards?
+:::
+
+::: {}
++ $5\times4\times3\times2\times1=5!=120$
+:::
+
+::: {}
++ $\implies P(${([A&#9824;]{.black-text}, [K&#9824;]{.black-text}, [Q&#9824;]{.black-text}, [J&#9824;]{.black-text}, [10&#9824;]{.black-text})}$)\approx$ 120/300 million.
+:::
+
+::: {}
++ In other words, there are $\approx$ (300 million / 120) ways to select 5 cards when we don't consider the order.
+:::
+
+::::
+
+:::::
+::::::
+
+## Combination
+
+:::::: {.columns}
+::::: {.column}
+
+::: {.definition}
+
+Any [unordered]{.accent-five} sequence of $n$ objects taken from a set of $N$ distinct objects is called a **combination**. The number of possible combinations of size $n$ from $N$ objects is 
+
+$$\binom{N}{n}=\frac{N!}{\left(N-n\right)!\cdot n!}.$$
+
+:::
+
+:::::
+::::: {.column .fragment}
+
+#### Examples
+
+::: {.incremental}
++  Dividing a baseball team of 12 into 2 teams for practice
++  Selecting 7 winners from 10 scholarship applicants
++  Forming other "words" by rearranging letters in "MOON"
+:::
+
+:::::
+::::::
+
+# R worksheet
+
+## Install `learnr` and run R worksheet {.half-title}
+
+:::: {.column width="45%"}
+1.   Click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main) to install `learnr` on [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+
+2.   Follow [this link](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Frlesson01&urlpath=shiny%2Frlesson01%2F&branch=main) to open the worksheet
+::::
+
+:::: {.full-height .right}
+
+<br />
+<br />
+
+If you see an error, try:
+
+::: {.note}
+1. Log in to [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2. Find `rlesson01` from _Files_ pane
+3. Click _Run Document_ 
+:::
+
+Other steps you may try:
+
+::: {.note}
+1.  Remove any `.Rmd` and `.R` files on the home directory of [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2.  In RStudio, 
+    i. Click `Tools` > `Global Options`
+    ii. Uncheck _"Restore most recently opened project at startup"_
+3.  Run `install.packages("learnr")` in RStudio after the steps above or click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main)
+:::
+
+::::
+
+
+# Summary
+
+::::: {.columns}
+:::: {.column}
+:::: 
+:::: {.column}
+
++  Probability maps events to numbers representing the level of uncertainty associated with the events
++  The three axioms of probability provide the basic mathematical properties of probability
++  In simple experiments with finite and equally likely outcomes, we can compute probabilities by counting the number of possible outcomes
+
+::::
+:::::
+## Practice questions {.center}
+
+Chapter 2, [Dekking et al.](https://librarysearch.library.utoronto.ca/permalink/01UTORONTO_INST/14bjeso/alma991106910545806196)
+
++   Quick Exercises 2.1, 2.3, 2.5, 2.7
++   Exercises from Dekking et al. Chapter 2: 2.1, 2.2, 2.6, 2.7, 2.9-2.19
+
+

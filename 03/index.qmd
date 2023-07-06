@@ -1,0 +1,1404 @@
+---
+title: "Lecture 3: Discrete Random Variables"
+subtitle: "STA237: Probability, Statistics, and Data Analysis I"
+author: "Michael Jongho Moon"
+institute: "PhD Student, DoSS, University of Toronto"
+date: "May 15, 2023"
+date-format: full
+format:
+  revealjs:
+    width: 1280
+    height: 720
+    theme: [default, ../theme.scss]
+    css: "style.css"
+    chalkboard: true
+    footer: |
+      &copy; 2023. Michael J. Moon. University of Toronto. 
+      
+      Sharing, posting, selling, or using this material
+      outside of your personal use in this course is
+      <strong>NOT</strong> permitted under any circumstances.
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(fontawesome)
+library(ggplot2)
+knitr::opts_chunk$set(eval = TRUE)
+palette(RColorBrewer::brewer.pal(8, "Accent"))
+# plot(1:5, col = 1:5, cex = 2, pch = 16)
+```
+
+
+# Example: Rolling two fair dice {.half-title}
+
+`r fontawesome::fa("dice", height="5em")`
+`r fontawesome::fa("dice", height="5em")`
+
+:::: {.full-height .right}
+
+
+::: {.incremental}
++  Suppose we are interested in the sum 
++  We may define 12 different events,  
+e.g., $S_2$, $S_3$, ... $S_{12}$
++  It would be more efficient to study a **variable** that takes the possible 
+values of the sum according to their probabilities, e.g., 
+$$X\in \left\{2,3,\ldots, 11,12\right\}$$
++  $X$ is an example of a **discrete random variable**
+:::
+
+::::
+
+# Discrete random variable {.half-title}
+
+::::: {.columns}
+:::: {.column}
+
+```{mermaid}
+flowchart LR
+    event((<font size=4em>Outcome))---fn(<font color=#386CB0><font size=4em>Random <br />Variable)-->value((<font color=#386CB0><font size=4em>Real<br />Number))
+    style event fill: #ffffff, stroke: #696969, stroke-width: 2px;
+    style fn fill: #ffffff, stroke: #696969, stroke-width: 2px;
+    style value fill: #ffffff, stroke: #696969, stroke-width: 2px;
+```
+
+::::
+:::: {.column}
+::::
+:::::
+
+::::: {.full-height .right}
+
+::: {.definition}
+Let $\Omega$ be a sample space. A **random variable** $X$ is a function that maps $\Omega$ on to real number ($\mathbb{R}$),
+$$X:\Omega\to\mathbb{R}.$$
+:::
+
+<br />
+
+:::: {.definition}
+When a _random variable_ $X$ takes a countable number of values, it is called a **discrete random variable**.
+::::
+
+::: {.fragment .note}
+_Note that a discrete random variable may take an infinite number of values._
+:::
+
+:::::
+
+
+## Example: Rock paper scissors 
+
+:::::: {.columns}
+:::: {.column}
+Suppose you play Rock Paper Scissors with a housemate.
+Assume both you and your friend pick each hand randomly.
+
+<br /> 
+
+:::: {.columns .text-center}
+::: {.column width="33%"}
+`r fontawesome::fa("hand-back-fist", height="3.5em")`
+:::
+::: {.column width="33%"}
+`r fontawesome::fa("hand", height="3.5em")`
+:::
+::: {.column width="33%"}
+`r fontawesome::fa("hand-scissors", height="3.5em")`
+:::
+::::
+:::: {.columns .text-center .fragment data-fragment-index="0"}
+::: {.column width="33%"}
+`r fontawesome::fa("dollar-sign", height="1.5em")`
+:::
+::: {.column width="33%"}
+`r fontawesome::fa("dollar-sign", height="1.5em")`
+`r fontawesome::fa("dollar-sign", height="1.5em")`
+:::
+::: {.column width="33%"}
+`r fontawesome::fa("dollar-sign", height="1.5em")`
+`r fontawesome::fa("dollar-sign", height="1.5em")`
+`r fontawesome::fa("dollar-sign", height="1.5em")`
+:::
+::::
+::: {.fragment .fragment data-fragment-index="1" .text-center .black-text}
+`r fontawesome::fa("archive", height="3.5em")`
+
+`r fontawesome::fa("dollar-sign", height="1.5em")`
+`r fontawesome::fa("dollar-sign", height="1.5em")`
+`r fontawesome::fa("dollar-sign", height="1.5em")`
+:::
+
+
+::::
+:::: {.column}
+
+::: {.fragment data-fragment-index="0"}
+
+In each round, the winner takes \$1, \$2, and \$3 from the loser when the winner wins
+with a rock, paper, and scissors respectively.
+:::
+
+::: {.fragment data-fragment-index="1"}
+When the round is a tie, you bot put \$3 in a communal cash box that you 
+share with other housemates. i.e., you _both_ lose \$3. 
+:::
+
+::: {.fragment data-fragment-index="2"}
+What is the probability that you win more than \$5 after playing 3 rounds?
+:::
+::::
+::::::
+
+## {}
+### Consider a single round
+
+:::::::: {.columns}
+:::::: {.column}
+
+::: {.incremental .nobullet}
+
++  Let $X_i$ be the amount you _earn_ in $i$th round and
+denote each round's outcome with  
+$($ your hand, your housemate's hand $)$.
+
++  e.g., $X_i(\{$ (`r fontawesome::fa("hand-scissors")`, 
+`r fontawesome::fa("hand")`) $\})=3$.
+
++  $X_i$ maps each possible outcome from a round to a dollar amount.
+
+:::
+
+::::::
+:::::: {.column}
+
+::::: {.fragment}
+:::: {.columns}
+::: {.column width="20%"}
+:::
+::: {.column width="60%" .text-center}
+Your hand
+:::
+::::
+
+
+:::: {.columns}
+::: {.column width="20%"}
+Their hand
+:::
+::: {.column width="20%"}
+`r fontawesome::fa("hand-back-fist", height="2em")`
+:::
+::: {.column width="20%"}
+`r fontawesome::fa("hand", height="2em")`
+:::
+::: {.column width="20%"}
+`r fontawesome::fa("hand-scissors", height="2em")`
+:::
+::::
+
+------
+
+:::: {.columns}
+::: {.column width="20%"}
+`r fontawesome::fa("hand-back-fist", height="2em")`
+:::
+::: {.column width="20%"}
+$$-3$$
+:::
+::: {.column width="20%"}
+$$2$$
+:::
+::: {.column width="20%"}
+$$-1$$
+:::
+::::
+
+:::: {.columns}
+::: {.column width="20%"}
+`r fontawesome::fa("hand", height="2em")`
+:::
+::: {.column width="20%"}
+$$-2$$
+:::
+::: {.column width="20%"}
+$$-3$$
+:::
+::: {.column width="20%"}
+$$3$$
+:::
+::::
+
+:::: {.columns}
+::: {.column width="20%"}
+`r fontawesome::fa("hand-scissors", height="2em")`
+:::
+::: {.column width="20%"}
+$$1$$
+:::
+::: {.column width="20%"}
+$$-3$$
+:::
+::: {.column width="20%"}
+$$-3$$
+:::
+::::
+:::::
+
+::::::
+::::::::
+
+## {}
+### $X_i$ is random
+
+:::::::: {.columns}
+:::::: {.column}
+
+::: {.incremental .nobullet}
+
++  Because the underlying mechanism is random, the value it takes is also random.
+
++  The underlying experiment also determines the probability associated with
+each possible value $X_i$ can take.
+
+:::
+
+::::::
+:::::: {.column}
+
+
+:::: {.columns}
+::: {.column width="20%"}
+:::
+::: {.column width="60%" .text-center}
+Your hand
+:::
+::::
+
+
+:::: {.columns}
+::: {.column width="20%"}
+Their hand
+:::
+::: {.column width="20%"}
+`r fontawesome::fa("hand-back-fist", height="2em")`
+:::
+::: {.column width="20%"}
+`r fontawesome::fa("hand", height="2em")`
+:::
+::: {.column width="20%"}
+`r fontawesome::fa("hand-scissors", height="2em")`
+:::
+::::
+
+------
+
+:::: {.columns}
+::: {.column width="20%"}
+`r fontawesome::fa("hand-back-fist", height="2em")`
+:::
+::: {.column width="20%"}
+$$-3$$
+:::
+::: {.column width="20%"}
+$$2$$
+:::
+::: {.column width="20%"}
+$$-1$$
+:::
+::::
+
+:::: {.columns}
+::: {.column width="20%"}
+`r fontawesome::fa("hand", height="2em")`
+:::
+::: {.column width="20%"}
+$$-2$$
+:::
+::: {.column width="20%"}
+$$-3$$
+:::
+::: {.column width="20%"}
+$$3$$
+:::
+::::
+
+:::: {.columns}
+::: {.column width="20%"}
+`r fontawesome::fa("hand-scissors", height="2em")`
+:::
+::: {.column width="20%"}
+$$1$$
+:::
+::: {.column width="20%"}
+$$-3$$
+:::
+::: {.column width="20%"}
+$$-3$$
+:::
+::::
+
+
+::::::
+::::::::
+
+## {}
+### $X_i$ is random
+
+:::::::: {.columns}
+:::::: {.column}
+
+::: {.nobullet}
+
++  Because the underlying mechanism is random, the value it takes is also random.
+
++  The underlying experiment also determines the probability associated with
+each possible value $X_i$ can take.
+
+:::
+
+::::::
+:::::: {.column}
+
+:::: {.columns}
+::: {.column width="30%" .border-right}
+$$x$$
+:::
+::: {.column width="10%"}
+$$-3$$
+:::
+::: {.column width="10%"}
+$$-2$$
+:::
+::: {.column width="10%"}
+$$-1$$
+:::
+::: {.column width="10%"}
+$$1$$
+:::
+::: {.column width="10%"}
+$$2$$
+:::
+::: {.column width="10%"}
+$$3$$
+:::
+::::
+
+:::: {.columns}
+::: {.column width="30%" .border-right}
+$$P\left(X=x\right)$$
+:::
+::: {.column width="10%"}
+$$\frac{4}{9}$$
+:::
+::: {.column width="10%"}
+$$\frac{1}{9}$$
+:::
+::: {.column width="10%"}
+$$\frac{1}{9}$$
+:::
+::: {.column width="10%"}
+$$\frac{1}{9}$$
+:::
+::: {.column width="10%"}
+$$\frac{1}{9}$$
+:::
+::: {.column width="10%"}
+$$\frac{1}{9}$$
+:::
+::::
+
+::::: {.fragment}
+
+$$P\left(X=x\right)=\begin{cases}
+  \frac{4}{9} & x=-3 \\
+  \frac{1}{9} & x\in\left\{-2, -1, 1, 2, 3\right\} \\
+  0 & \text{otherwise.}
+\end{cases}$$
+
+:::::
+
+:::: {.fragment .note}
+We can omit $\{$ inside probability functions with random variables.
+::::
+::::::
+::::::::
+
+## {}
+### $X_i$ is random
+
+:::::::: {.columns}
+:::::: {.column}
+
+::: {.nobullet}
+
++  Because the underlying mechanism is random, the value it takes is also random.
+
++  The underlying experiment also determines the probability associated with
+each possible value $X_i$ can take.
+
++  The probability function defined for all possible values of a random variable
+describes the relative likelihoods or their **distribution**.
+
++  Such probability function is called **probability mass function**.
+:::
+
+::::::
+:::::: {.column}
+
+:::: {.columns}
+::: {.column width="30%" .border-right}
+$$x$$
+:::
+::: {.column width="10%"}
+$$-3$$
+:::
+::: {.column width="10%"}
+$$-2$$
+:::
+::: {.column width="10%"}
+$$-1$$
+:::
+::: {.column width="10%"}
+$$1$$
+:::
+::: {.column width="10%"}
+$$2$$
+:::
+::: {.column width="10%"}
+$$3$$
+:::
+::::
+
+:::: {.columns}
+::: {.column width="30%" .border-right}
+$$P\left(X_i=x\right)$$
+:::
+::: {.column width="10%"}
+$$\frac{4}{9}$$
+:::
+::: {.column width="10%"}
+$$\frac{1}{9}$$
+:::
+::: {.column width="10%"}
+$$\frac{1}{9}$$
+:::
+::: {.column width="10%"}
+$$\frac{1}{9}$$
+:::
+::: {.column width="10%"}
+$$\frac{1}{9}$$
+:::
+::: {.column width="10%"}
+$$\frac{1}{9}$$
+:::
+::::
+
+::::: {}
+
+$$P\left(X_i=x\right)=\begin{cases}
+  \frac{4}{9} & x=-3 \\
+  \frac{1}{9} & x\in\left\{-2, -1, 1, 2, 3\right\} \\
+  0 & \text{otherwise.}
+\end{cases}$$
+
+:::::
+
+
+:::: {.note}
+We can omit $\{$ inside probability functions with random variables.
+::::
+
+::::::
+::::::::
+
+
+# Probability mass function {.half-title}
+
+:::: {.column width="45%"}
+::: {.fragment .note}
+The probability mass function (pmf) **uniquely** defines (the behaviour of) a random variable.
+:::
+::::
+
+::::: {.full-height .right}
+
+::: {.definition}
+The **probability mass function** $p$ of a discrete random variable $X$ is the function 
+$$p:\mathbb{R}\to\left[0,1\right],$$
+
+defined by
+
+$$p(k)=P\left(X=k\right)\quad$$
+$$\quad\text{for }-\infty<k<\infty.$$
+:::
+
+:::::
+
+## Example: Rock paper scissors {.half-title}
+
+```{r}
+#| echo: false
+#| include: false
+x <- c(-3:-1, rep(-3, 3), 1:3)
+rsp <- expand_grid(x1 = x, x2 = x, x3 = x) |>
+  mutate(S = x1 + x2 + x3)
+rsp_p <- as.data.frame(table(rsp$S)) |>
+  rename(s = Var1, freq = Freq) |>
+  mutate(
+    pmf = freq / sum(freq),
+    cdf = cumsum(pmf),
+    s = as.numeric(as.character(s))
+  ) |>
+  add_row(s = -11, pmf = 0, cdf = 0, .before = 1)
+rsp_pmf <- ggplot(rsp_p |> filter(s %in% (-9:9)), aes(x = s, y = pmf)) +
+  theme_minimal() +
+  geom_bar(stat = "identity", width = 0.05) +
+  geom_point() +
+  scale_y_continuous(breaks = c(0, 0.05, 0.1)) +
+  scale_x_continuous(breaks = -9:9, limits = c(-11, 10)) +
+  labs(
+    title = "Probability mass function of S",
+    y = expression(p[S](s))
+  ) +
+  theme(
+    plot.title.position = "plot",
+    plot.title = element_text(size = 32),
+    axis.title = element_text(size = 20),
+    axis.text = element_text(size = 16)
+  )
+rsp_cdf <- ggplot(rsp_p, aes(x = lag(s), y = cdf, xend = s, yend = cdf)) +
+  theme_minimal() +
+  geom_segment() +
+  geom_point(aes(x = s), pch = 21, fill = "white", size = 2,
+             data = filter(rsp_p, s < 9, s > -10)) +
+  geom_point(pch = 21, fill = "black", size = 2,
+             data = filter(rsp_p, s >  -10)) +
+  scale_x_continuous(breaks = -9:9, limits = c(-11, 10)) +
+  scale_y_continuous(breaks = c(0, 0.5, 1)) +
+  labs(
+    title = "Cumulative distribution function of S",
+    y = expression(F[S](s)), x = "s"
+  ) +
+  theme(
+    plot.title.position = "plot",
+    plot.title = element_text(size = 32),
+    axis.title = element_text(size = 20),
+    axis.text = element_text(size = 16)
+  )
+```
+
+
+:::::: {.column width="45%"}
+
+:::: {.nobullet}
++  Let $S=\sum_{i=1}^3 X_i$.
++  We are interested in $$P\left(S>5\right).$$
+::::
+
+
+:::: {.fragment .nobullet}
++  $P\left(S>5\right)$
++  $=P\left(S=6\right)$
++  $\phantom{=}+P\left(S=7\right)$
++  $\phantom{=}+P\left(S=8\right)$
++  $\phantom{=}+P\left(S=9\right)$
+::::
+
+::::::
+
+:::: {.full-height .right}
+
+<br />
+
+::: {.note .fragment}
+There are $9^3$ equally likely outcomes from playing 3 rounds.
+:::
+::: {.note .fragment}
+$S=6$ when you win by one of  
+$(\$2, \$2, \$2)$,  
+$3!$ arrangements of $(\$3, \$2, \$1)$.
+:::
+::: {.note .fragment}
+$S=7$ when you win by one of  
+$3!/2!$ arrangements of $(\$3, \$3, \$1)$,  
+$3$ arrangements of $(\$3, \$2, \$2)$.
+:::
+::: {.note .fragment}
+$S=8$ when you win by one of  
+$3$ arrangements of $(\$3, \$3, \$2)$
+:::
+::: {.note .fragment}
+$S=9$ when you win by $(\$3, \$3, \$3)$
+:::
+::: {.fragment}
+$$P(S>5)=\frac{7 + 6 + 3 + 1}{9^3}=\frac{17}{729}$$
+:::
+::::
+
+# Cumulative distribution function {.half-title}
+
+:::: {.column width="45%"}
+::: {.note}
+The cumulative distribution function (cdf) also **uniquely** defines (the behaviour of) a random variable.
+:::
+::::
+
+::::: {.full-height .right}
+
+::: {.definition}
+The **cumulative distribution function**, or **distribution function** $F$ of 
+a random variable $X$ is the function 
+
+$$F:\mathbb{R}\to\left[0,1\right],$$
+
+defined by
+
+$$F(a)=P\left(X\le a\right)\quad$$
+$$\quad\text{for }-\infty < a<\infty.$$
+:::
+
+:::::
+
+## Example: Rock paper scissors {.half-title}
+
+```{r}
+#| echo: false
+#| include: false
+x <- c(-3:-1, rep(-3, 3), 1:3)
+rsp <- expand_grid(x1 = x, x2 = x, x3 = x) |>
+  mutate(S = x1 + x2 + x3)
+rsp_p <- as.data.frame(table(rsp$S)) |>
+  rename(s = Var1, freq = Freq) |>
+  mutate(
+    pmf = freq / sum(freq),
+    cdf = cumsum(pmf),
+    s = as.numeric(as.character(s))
+  ) |>
+  add_row(s = -11, pmf = 0, cdf = 0, .before = 1)
+rsp_pmf <- ggplot(rsp_p |> filter(s %in% (-9:9)), aes(x = s, y = pmf)) +
+  theme_minimal() +
+  geom_bar(stat = "identity", width = 0.05) +
+  geom_point() +
+  scale_y_continuous(breaks = c(0, 0.05, 0.1)) +
+  scale_x_continuous(breaks = -9:9, limits = c(-11, 10)) +
+  labs(
+    title = "Probability mass function of S",
+    y = expression(p[S](s))
+  ) +
+  theme(
+    plot.title.position = "plot",
+    plot.title = element_text(size = 32),
+    axis.title = element_text(size = 20),
+    axis.text = element_text(size = 16)
+  )
+rsp_cdf <- ggplot(rsp_p, aes(x = lag(s), y = cdf, xend = s, yend = cdf)) +
+  theme_minimal() +
+  geom_segment() +
+  geom_point(aes(x = s), pch = 21, fill = "white", size = 2,
+             data = filter(rsp_p, s < 9, s > -10)) +
+  geom_point(pch = 21, fill = "black", size = 2,
+             data = filter(rsp_p, s >  -10)) +
+  scale_x_continuous(breaks = -9:9, limits = c(-11, 10)) +
+  scale_y_continuous(breaks = c(0, 0.5, 1)) +
+  labs(
+    title = "Cumulative distribution function of S",
+    y = expression(F[S](s)), x = "s"
+  ) +
+  theme(
+    plot.title.position = "plot",
+    plot.title = element_text(size = 32),
+    axis.title = element_text(size = 20),
+    axis.text = element_text(size = 16)
+  )
+```
+
+
+:::::: {.column width="45%"}
+
+$$P\left(S>5\right)$$
+
+:::: {.incremental .nobullet}
++  Once we study the full distribution and derive its cdf, $F_S\left(s\right)$,
+we can compute the probability quickly.
+::::
+
+::: {.fragment .note}
+$$F_\color{red}{S}\left(\color{blue}{s}\right)$$
+
++  $\color{red}{S}$: The random variable of interest.
++  $\color{blue}{s}$: The input value to the function.
+
+:::
+
+:::: {.incremental .nobullet}
++  $$P\left(S>5\right)=1-P\left(S\le5\right)=1-F_S\left(5\right)$$
+::::
+
+::::::
+
+:::: {.fragment .full-height .right}
+
+<br />
+
+```{r}
+rsp_pmf
+rsp_cdf
+```
+
+::::
+
+# Common discrete distributions
+
+## Bernoulli distribution {.center .half-title}
+
+:::: {.column width="45%"}
+::: {.fragment .note}
+
+$\theta$ is commonly written as $p$ as it represents a probability. We will
+use $\theta$ to avoid confusion with pmf.
+
+:::
+::::
+
+::::: {.full-height .right}
+::: {.definition}
+
+A discrete random variable $X$ has a **Bernoulli distribution** with parameter $\theta$, $0\le \theta\le 1$, if its probability mass function is given by
+
+$$p_X(x)=\begin{cases} \theta & \text{when }x=1 \\ 1-\theta & \text{when }x=0.\end{cases}$$
+
+We denote the distribution by $\text{Ber}(\theta)$ and define the random variable by $X\sim \text{Ber}(\theta)$.
+:::
+:::::
+
+## {.center}
+
+### Examples 
+
+
+::::: {.columns}
+:::: {.column}
+::: {.incremental}
+
++  $Y=1$ when Michael answers a multiple choice question correctly and $Y=0$ otherwise
++  Let $W=1$ when $S>5$ and $0$ otherwise in the rock paper scissors example
++  Success vs. failure
++  True vs. false
++  Exists vs. does not exist
+
+:::
+:::: 
+:::: {.column}
+
+::: {.fragment}
+In general, we can model experiments with _[exactly two possible outcomes]{.accent-five}_ with Bernoulli random variables.
+:::
+
+::::
+:::::
+
+## {.center}
+### Example: Rock paper scissors
+
+::::::: {.columns}
+::::: {.column}
+
+Suppose you want 'all-or-nothing',  
+propose a 5-round game, and  
+play only scissors. 
+
+Assume that your friend still plays randomly. 
+
+What is the probability that you would win more than \$0 after the 5 rounds?
+
+:::::
+::::: {.column .text-center}
+:::: {.columns}
+::: {.column width="15%"}
+`r fontawesome::fa("hand-scissors")`  
+\$3  
+`r fontawesome::fa("question")`
+:::
+::: {.column width="15%"}
+`r fontawesome::fa("hand-scissors")`  
+\$3  
+`r fontawesome::fa("question")`
+:::
+::: {.column width="15%"}
+`r fontawesome::fa("hand-scissors")`  
+\$3  
+`r fontawesome::fa("question")`
+:::
+::: {.column width="15%"}
+`r fontawesome::fa("hand-scissors")`  
+\$3  
+`r fontawesome::fa("question")`
+:::
+::: {.column width="15%"}
+`r fontawesome::fa("hand-scissors")`  
+\$3  
+`r fontawesome::fa("question")`
+:::
+::::
+:::::
+:::::::
+
+## {}
+
+Let $W_i$ be the $\text{Ber}(\theta)$ random variable representing whether you win round $i$.
+
+::: {.fragment}
+We can denote the number of rounds you win as $N=W_1 + W_2 + W_3 + W_4 + W_5$. You need to **at least 3 rounds** to win more than \$0.
+
+$$P(N \ge 3)=1 - P(N < 3) = 1 - P(N \le 2) = 1 - F_N(2)$$
+:::
+::: {.fragment}
+Let's consider $F_N(2)=p_N(0) + p_N(1) + p_N(2)$
+:::
+
+:::::: {.incremental .nobullet}
++ $p_N(2) = P(N=2)$
++ $\phantom{P_N(2)}= P\left(\left\{\text{Win 2 and lose 3}\right\}\right)$
++ $\phantom{P_N(2)}=\binom{5}{2}P\left(\left\{\left(W_1 \cap W_2 \cap W_3^c \cap W_4^c \cap W_5^c\right)\right\}\right)$
++ $\phantom{P_N(2)}=\binom{5}{2}P\left(W_1\right)P\left(W_2\right)P\left(W_3^c\right)P\left(W_4\right)P\left(W_5\right)$
++ $\phantom{P_N(2)}=\binom{5}{2}\theta^2\left(1-\theta\right)^3$
+::::::
+
+## {.center}
+
+::::::: {.columns}
+:::: {.column}
+::: {.nobullet}
++ $p_N(2) = \binom{5}{2}\theta^2\left(1-\theta\right)^3$
++ $p_N(1) = \cdots =\binom{5}{1}\theta^1\left(1-\theta\right)^4$
++ $p_N(0) = \cdots =\binom{5}{0}\theta^0\left(1-\theta\right)^5$
+:::
+::::
+:::: {.column}
+::: {.fragment}
+$$p_N(x) = \binom{5}{x}\theta^x\left(1-\theta\right)^{5-x}$$
+:::
+::::
+:::::::
+
+
+## Binomial distribution {.center .half-title}
+
+:::: {.column width="45%"}
+::: {.fragment .note}
+
+It's important to remember the total number of objects, or often referred to as trials, $n$ is a fixed parameter as well as $\theta$ (or commonly $p$ for the probability of event occurring, and sometimes $q$ for the probability no event).
+
+:::
+::::
+
+::::: {.full-height .right}
+::: {.definition}
+A discrete random variable $X$ has a **binomial distribution** with parameters $n$ and $\theta$, $n = 1, 2, 3, \ldots$, and $0\le \theta \le 1$, if its probability mass function is given by
+
+$$p_X(x)=\binom{n}{x}\theta^x(1-\theta)^{n-x} \quad$$
+$$\quad \text{for all }x=0, 1, 2, \ldots, n.$$
+
+We denote the distribution by $\text{Bin}(n,\theta)$.
+:::
+:::::
+
+## {.center}
+### Examples 
+
+::::: {.columns}
+:::: {.column}
+::: {.incremental}
+
++  $N\sim\text{Bin}(5, 1/3)$ from the 'all-or-nothing' Rock paper scissors example
++  The number of questions Michael answers correctly out of 10 multiple choice 
+questions with similar level of difficulty
++  Number of successes (failures) out of a fixed number of trials
+
+:::
+:::: 
+:::: {.column}
+::: {.fragment}
+The distribution describes a sum of $n$ **independent** and **identical** 
+Bernoulli trials.
+:::
+::::
+:::::
+
+## Geometric distribution {.center .half-title}
+
+:::: {.column width="45%"}
+::: {.fragment .note}
+
+The number of experiments (trials) is no longer fixed.
+
+:::
+::::
+
+::::: {.full-height .right}
+::: {.definition}
+A discrete random variable $X$ has a **geometric distribution** with parameter $\theta$, $0 < \theta \le 1$, if its probability mass function is given by
+
+$$p_X(x)=(1-\theta)^{x-1}\theta\quad$$
+$$\quad\text{for } x=1,2,\ldots.$$
+
+We denote this distribution by $\text{Geo}(\theta)$.
+
+:::
+:::::
+
+## {.center}
+
+### Examples 
+
+::::: {.columns}
+:::: {.column}
+::: {.incremental}
+
++  Number of rock, paper, and scissors games you play until you win
++  Number of rock, paper, and scissors games you play until you lose
++  Number of trials until the first success (failure) 
+
+:::
+:::: 
+:::: {.column}
+::: {.fragment}
+The number of identical Bernoulli trials until the first event.
+:::
+::::
+:::::
+
+
+# Example: Whale population {.center .half-title}
+
+```{r}
+set.seed(237)
+
+whales <- sample(c(rep("img/whale.png", 4), rep("", 5)), size = 9)
+ocean <- expand_grid(x = 1:3, y = 1:3) |>
+  slice_sample(n = 4) |> 
+  mutate(img = "img/whale.png")
+
+whale_plt <- ggplot(ocean) +
+  theme_void() +
+  geom_vline(xintercept = c(1.5, 2.5), colour = "#696969", linewidth = 2) +
+  geom_hline(yintercept = c(1.5, 2.5), colour = "#696969", linewidth = 2) +
+  ggimage::geom_image(aes(x = x, y = y, image = img), size = .25) +
+  coord_cartesian(xlim = c(0.5, 3.5), ylim = c(0.5, 3.5), expand = 0) +
+  theme(panel.background = element_rect(fill = "lightblue", color = NA))
+
+ocean_2 <- expand_grid(x = seq(.5625, 3.4375, by = .125), 
+                       y = seq(.5625, 3.4375, by = .125)) |>
+  slice_sample(n = 64) |> 
+  mutate(img = "img/whale.png")
+whale_plt_2 <- ggplot(ocean_2) +
+  theme_void() +
+  geom_vline(xintercept = seq(.625, 3.375, .125), 
+             colour = "#696969", linewidth = .5) +
+  geom_hline(yintercept = seq(.625, 3.375, .125), 
+             colour = "#696969", linewidth = .5) +
+  ggimage::geom_image(aes(x = x, y = y, image = img), size = .05) +
+  coord_cartesian(xlim = c(0.5, 3.5), ylim = c(0.5, 3.5), expand = 0) +
+  theme(panel.background = element_rect(fill = "lightblue", color = NA))
+```
+
+:::: {.column width="45%"}
+
+```{r}
+#| fig-cap: <a href="https://www.flaticon.com/free-icons/whale" title="whale icons">Whale icons created by Good Ware - Flaticon</a>
+#| out-width: "75%"
+whale_plt
+```
+
+::::
+
+::::: {.full-height .right}
+
+<br />
+
+Suppose you take a high-resolution satellite picture the ocean and divide the
+picture into 9 lots as shown. The chance of one or more whales being captured 
+in each lot is $4/9$.
+
+Observing whales in each lot is independent and all have the same probability.
+
+Let $Y_9$ be the number of lots with whales out of 9 lots.
+
+::: {.fragment}
+
+$$
+Y_9\sim\text{Binom}\left(9, 4/9\right)
+$$
+
+:::
+
+:::::
+
+# Example: Whale population {.center .half-title}
+
+:::: {.column width="45%"}
+
+```{r}
+#| fig-cap: <a href="https://www.flaticon.com/free-icons/whale" title="whale icons">Whale icons created by Good Ware - Flaticon</a>
+#| out-width: "75%"
+whale_plt_2
+```
+
+
+::::
+
+::::: {.full-height .right}
+
+<br />
+
+
+You are interested in studying the the number of whales you capture in each 
+picture, $X$. 
+
+You realize there could be more than one whale in each lot and
+decide to make the lots smaller and smaller until they can fit only one
+per lot.
+
+::: {.note}
+
+Assume the proportion of lots with whales remain constant at $4/9$.
+
+:::
+
+::: {.fragment}
+Q. How many lots do you need?
+:::
+::: {.fragment .text-right}
+A. A very large number. 
+:::
+:::::
+
+## {}
+### Let's consider a simpler case of dividing an 1D interval
+
+:::::: {.columns}
+::::: {.column}
+
+```{r echo=FALSE, out.width="100%", fig.asp=0.02, dpi=144}
+x5 <- sample.int(5, 3)
+ppois5 <- ggplot() +
+  theme_void() +
+  xlim(0, 10) +
+  geom_vline(xintercept = seq(0, 10, 2), color = "#696969") +
+  geom_hline(yintercept = 0, color = "#696969") +
+  annotate("segment", y = 0, yend = 0, 
+           x = x5 * 2, xend = x5 * 2 - 2, 
+           color = "#386CB0", linewidth = 2)
+x10 <- sample.int(10, 6)
+ppois10 <- ggplot() +
+  theme_void() +
+  xlim(0, 10) +
+  geom_vline(xintercept = seq(0, 10, 1), color = "#696969") +
+  geom_hline(yintercept = 0, color = "#696969") +
+  annotate("segment", y = 0, yend = 0, 
+           x = x10, xend = x10 - 1, 
+           color = "#386CB0", linewidth = 2)
+x20 <- sample.int(20, 12)
+ppois20 <- ggplot() +
+  theme_void() +
+  xlim(0, 10) +
+  geom_vline(xintercept = seq(0, 10, .5), color = "#696969") +
+  geom_hline(yintercept = 0, color = "#696969") +
+  annotate("segment", y = 0, yend = 0, 
+           x = x20 / 2, xend = (x20 - 1) / 2, 
+           color = "#386CB0", linewidth = 2)
+x40 <- sample.int(40, 24)
+ppois40 <- ggplot() +
+  theme_void() +
+  xlim(0, 10) +
+  geom_vline(xintercept = seq(0, 10, .25), color = "#696969") +
+  geom_hline(yintercept = 0, "#696969") +
+  annotate("segment", y = 0, yend = 0, 
+           x = x40 / 4, xend = (x40 - 1) / 4, 
+           color = "#386CB0", linewidth = 2)
+x80 <- sample.int(80, 48)
+ppois80 <- ggplot() +
+  theme_void() +
+  xlim(0, 10) +
+  geom_vline(xintercept = seq(0, 10, .125), color = "#696969") +
+  geom_hline(yintercept = 0, color = "#696969") +
+  annotate("segment", y = 0, yend = 0, 
+           x = x80 / 8, xend = (x80 - 1) / 8, 
+           color = "#386CB0", linewidth = 2)
+ppois5
+ppois10
+ppois20
+ppois40
+ppois80
+```
+
+$$\vdots$$
+
+```{r echo=FALSE, out.width="100%", fig.asp=0.02, dpi=144}
+x1000 <- sample.int(1000, 600)
+ppois1000 <- ggplot() +
+  theme_void() +
+  xlim(0, 10) +
+  geom_vline(xintercept = seq(0, 10, 0.01), color = "#696969", alpha = .2) +
+  geom_hline(yintercept = 0, color = "#696969") +
+  annotate("segment", y = 0, yend = 0, 
+           x = x1000 / 100, xend = (x1000 - 1) / 100, 
+           color = "#386CB0", linewidth = 2)
+ppois1000
+```
+
+:::::
+::::: {.column}
+
+::: {.incremental .nobullet}
++  Assume each interval experiences [_success_]{.accent-five} with the same probability, $p_n$,
+and independently each time you divide the segment.
++  The (expected) rate of [_success_]{.accent-five}, $\lambda=n \cdot p_n$, remains the same in length as you divide the segment into $n$ intervals.
++  For each $n$, the number of [_successful intervals_]{.accent-five}, $X_n\sim\text{Bin}\left(n,p_n\right)$.
+:::
+
+:::::
+::::::
+
+
+## {}
+### Let's consider a simpler case of dividing an 1D interval
+
+
+::: {.nobullet}
++  If we take $n$ to $\infty$ (and drop the subscript $n$ from $p_n$ to simplify the notation), we get  
+$\lim_{n\to\infty}p_{X_n}\left(x\right)=\lim_{n\to\infty}\binom{n}{x}p^x(1-p)^{n-x}$
+:::
+::: {.incremental .nobullet}
++  $\phantom{\lim_{n\to\infty}p_{X_n}\left(x\right)}=\lim_{n\to\infty}\left[\frac{n!}{x!\left(n-x\right)!}\left(\lambda\left/n\right.\right)^x\left(1-\lambda\left/n\right.\right)^{n-x}\right]$
++  $\phantom{\lim_{n\to\infty}p_{X_n}\left(x\right)}=\frac{\lambda^x}{x!}\cdot\lim_{n\to\infty}\left[\frac{n!}{\left(n-x\right)!n^x}\left(1-\lambda\left/n\right.\right)^{n}\left(1-\lambda\left/n\right.\right)^{-x}\right]$
++  $\phantom{\lim_{n\to\infty}p_{X_n}\left(x\right)}=\frac{\lambda^x}{x!}\cdot\left[\lim_{n\to\infty}\frac{n!}{\left(n-x\right)!n^x}\right]\cdot\left[\lim_{n\to\infty}\left(1-\lambda\left/n\right.\right)^{n}\right]$ $\phantom{==\lim_{n\to\infty}p_{X_n}\left(x\right)}\cdot\left[\lim_{n\to\infty}\left(1-\lambda\left/n\right.\right)^{-x}\right]$
++  $\phantom{\lim_{n\to\infty}p_{X_n}\left(x\right)=}\vdots$
++  $\phantom{\lim_{n\to\infty}p_{X_n}\left(x\right)}=\frac{\lambda^x e^{-\lambda}}{x!}$
+:::
+
+## {}
+
+::: {.text-center}
+$\frac{\lambda^x}{x!}$
+$\cdot$[$\left[\lim_{n\to\infty}\frac{n!}{\left(n-x\right)!n^x}\right]$]{.accent-two}
+$\cdot$[$\left[\lim_{n\to\infty}\left(1-\lambda\left/n\right.\right)^{n}\right]$]{.accent-three}
+$\cdot$[$\left[\lim_{n\to\infty}\left(1-\lambda\left/n\right.\right)^{-x}\right]$]{.accent-five}
+:::
+
+
+:::::: {.columns}
+::::: {.column}
+:::: {.incremental .nobullet}
++  [$\lim_{n\to\infty}\frac{n!}{\left(n-x\right)!n^x}$]{.accent-two}
++  $=\lim_{n\to\infty}\frac{n(n-1)(n-2)\cdots(n-x+1)}{n^x}$
++  $=\lim_{n\to\infty}\frac{n(n-1)(n-2)\cdots(n-x+1)}{n\cdot n\cdots n}$
++  $=\lim_{n\to\infty}\frac{n}{n}\cdot\frac{n-1}{n}\cdot\frac{n-2}{n}\cdots\frac{n-x+1}{n}$
++  $=1$
+::::
+:::::
+::::: {.column}
+:::: {.nobullet .fragment}
++  [$\lim_{n\to\infty}\left(1-\lambda\left/n\right.\right)^{n}$]{.accent-three}
+
+> $e=\lim_{x\to\infty}\left(1 + 1\left/x\right.\right)^x$
+
++  $=\lim_{n\to\infty}\left[\left(1+1\left/(-n/\lambda)\right.\right)^{(-n/\lambda)}\right]^{-\lambda}$
++  $=e^{-\lambda}$
+::::
+
+:::: {.nobullet .fragment}
++  [$\left[\lim_{n\to\infty}\left(1-\lambda\left/n\right.\right)^{-x}\right]$]{.accent-five}
++  $=1$
+::::
+:::::
+::::::
+
+## Poisson distribution {.center .half-title}
+
+:::: {.column width="45%"}
+::: {.fragment .note}
+
+The random variable captures the _count_ of events in a fixed interval of _Poisson process_.
+
+:::
+::::
+
+::::: {.full-height .right}
+::: {.definition}
+
+A discrete random variable $X$ has a **Poisson distribution** with parameter $\lambda$, $\lambda > 0$, if its probability mass function is given by
+
+$$p_X(x)=\frac{e^{-\lambda}\lambda^x}{x!}\quad\quad\text{for }x=0,1,2,\ldots.$$
+
+We denote the distribution by $\text{Pois}(\lambda)$.
+
+:::
+:::::
+
+## {.center}
+
+::::: {.columns}
+:::: {.column}
+
+### Poisson process assumptions
+
+1.  The expected rate, $\lambda$, at which events occur is constant over the interval. 
+2.  All events are independent of each other.
+3.  Events can not occur simultaneously.
+
+:::: 
+:::: {.column}
+
+### Examples of Poisson random variables
+
+::: {.incremental}
++  Number of calls received at a call centre in an hour
++  Number of dandelion flowers in 1 square meter lawn
++  ...
+:::
+
+::::
+:::::
+
+## {}
+
+(Dekking et al. Exercise 12.1)
+
+Which of the following examples would  
+reasonably suit the Poisson process assumptions?
+
+:::::: {.columns}
+:::: {.column width="30%" .fragment}
+
+_The times of bankruptcy of enterprises in the United States._
+
+::: {.fragment .note}
+No. They tend to occur in clusters.
+:::
+::::
+:::: {.column width="30%" .fragment}
+_The times a chicken lays its eggs._
+
+::: {.fragment .note}
+No. A chicken probably can't lay a new egg immediately after laying one.
+:::
+::::
+:::: {.column width="30%" .fragment}
+_The times of airplane crashes in a worldwide registration._
+
+::: {.fragment .note}
+Yes.
+:::
+::::
+:::: {.column width="30%" .fragment}
+_The locations of wrongly spelled words in a book._
+
+::: {.fragment .note}
+Yes.
+:::
+::::
+:::: {.column width="50%" .fragment}
+_The times of traffic accidents at a crossroad._
+
+::: {.fragment .note}
+Yes if you assume the accidents are minor and don't affect the future traffic.  
+No if you assume major accidents occur and authorities block the traffic.
+:::
+::::
+:::::
+
+## {.center}
+
+### Example: Customer arrival
+
+(Dekking et al. Exercise 12.2)
+
+The number of customers that visit a bank on a day is modeled by a Poisson distribution. It is known that the probability of no customers at all is 0.00001. What is the expected number of customers?
+
+::::: {.columns}
+:::: {.column}
+::: {.incremental .nobullet}
++  Let $N$ be the number of customers per day.
++  $p_N(0)=0.00001$
++  $\phantom{P_N(0)}=\frac{e^{-\lambda}\lambda^0}{0!}$
++  $\phantom{P_N(0)}=e^{-\lambda}$
+:::
+::::
+:::: {.column .fragment}
+
+$$\implies \lambda = -\log\left(0.00001\right)=11.513$$
+
+::::
+:::::
+
+# R worksheet
+
+## Install `learnr` and run R worksheet {.half-title}
+
+:::: {.column width="45%"}
+1.   Click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main) to install `learnr` on [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+
+2.   Follow [this link](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Frlesson03&urlpath=shiny%2Frlesson03%2F&branch=main) to open the worksheet
+::::
+
+:::: {.full-height .right}
+
+<br />
+<br />
+
+If you see an error, try:
+
+::: {.note}
+1. Log in to [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2. Find `rlesson03` from _Files_ pane
+3. Click _Run Document_ 
+:::
+
+Other steps you may try:
+
+::: {.note}
+1.  Remove any `.Rmd` and `.R` files on the home directory of [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2.  In RStudio, 
+    i. Click `Tools` > `Global Options`
+    ii. Uncheck _"Restore most recently opened project at startup"_
+3.  Run `install.packages("learnr")` in RStudio after the steps above or click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main)
+:::
+
+::::
+
+# Summary
+
+::::: {.columns}
+:::: {.column}
+:::: 
+:::: {.column}
+
++  Discrete random variables describe countable random outcomes
++  Probability mass function and cumulative distribution function uniquely define the behaviour of a random variable
++  Common discrete random variables include binomial and Poisson 
+
+::::
+:::::
+
+## Practice questions {.center}
+
+Chapter 4, [Dekking et al.](https://librarysearch.library.utoronto.ca/permalink/01UTORONTO_INST/14bjeso/alma991106910545806196)
+
++   Quick Exercises 4.3, 4.5, 4.6
++   All exercises from the chapter
+
+Chapter 12, [Dekking et al.](https://librarysearch.library.utoronto.ca/permalink/01UTORONTO_INST/14bjeso/alma991106910545806196)
+
++   Quick Exercise 12.1
++   Exercises 12.3, 12.4, 12.5, 12.6
+
+
++   See a collection of corrections by the author [here](https://www.tudelft.nl/ewi/over-de-faculteit/afdelingen/applied-mathematics/applied-probability/education/mips)
+
+

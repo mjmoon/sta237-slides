@@ -1,0 +1,1124 @@
+---
+title: "Lecture 5: Expectation and Variance"
+subtitle: "STA237: Probability, Statistics, and Data Analysis I"
+author: "Michael Jongho Moon"
+institute: "PhD Student, DoSS, University of Toronto"
+date: "May 29, 2023"
+date-format: full
+format:
+  revealjs:
+    width: 1280
+    height: 720
+    theme: [default, ../theme.scss]
+    css: "style.css"
+    chalkboard: true
+    footer: |
+      &copy; 2023. Michael J. Moon. University of Toronto. 
+      
+      Sharing, posting, selling, or using this material
+      outside of your personal use in this course is
+      <strong>NOT</strong> permitted under any circumstances.
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(fontawesome)
+library(ggforce)
+knitr::opts_chunk$set(eval = TRUE)
+palette(RColorBrewer::brewer.pal(8, "Accent"))
+# plot(1:5, col = 1:5, cex = 2, pch = 16)
+theme_sizes <- theme(
+    plot.title = element_text(size = 32),
+    plot.subtitle = element_text(size = 24),
+    axis.text = element_text(size = 20),
+    axis.title = element_blank(),
+    legend.text = element_text(size = 20)
+  )
+```
+
+
+# Example: My coffee shop {.half-title}
+
+```{r}
+#| echo: false
+pcoffee <- ggplot(tibble(x = 0:15, d = dpois(0:15, 4)), aes(x = x, y = d)) +
+  theme_void() +
+  geom_segment(aes(xend = x, yend = 0)) +
+  geom_point(size = 5, col = 1) +
+  annotate("text", 7, dpois(4, 3), label = "pmf", size = 14) +
+  scale_x_continuous(breaks = seq(0, 20, 5)) +
+  theme(axis.text.x = element_text(size = 16))
+pcoffee
+```
+
+:::: {.full-height .right}
+
+<br />
+
+::: {.incremental .nobullet}
++  Suppose Michael opens a coffee shop and the daily number of customers follows a distribution described by the pmf on the left.
++  How many customers does he expect per day? How variable are daily customer counts?
++  The distribution contains the information. We will discuss how we represent them.
+
+:::
+
+::::
+
+
+# Expectation of a discrete random variable {.half-title .center}
+
+:::: {.fragment .column width="45%"}
+::: {.note}
+Also called the _expected value_ or _mean_.
+:::
+::::
+
+
+:::: {.full-height .right}
+
+::: {.definition}
+
+The **expectation** of a discrete random variable $X$ taking values $x_1, x_2, \ldots$ and with probability mass function $p$ is the number given by
+
+$$E\left[X\right]=\sum_{i\in\{1,2,\ldots\}}x_i p\left(x_i\right).$$
+
+:::
+
+::::
+
+
+## Example: Coffee cups
+
+::::: {.columns}
+:::: {.column}
+
+Suppose Michael drinks $Y$ cups of coffee  
+per day where $Y$ is a random variable  
+that is defined by 
+the probability mass function shown below.
+
+```{r}
+pmf_coffee_cups <- tibble(
+  x = c(0, 1, 2, 3, 8),
+  p = c(1/6, 1/6, 1/3, 1/6, 1/6),
+  plab = c("frac(1,6)", "frac(1,6)", "frac(1,3)", "frac(1,6)", "p(8)")
+)
+ggplot(pmf_coffee_cups, aes(x = x, y = p)) +
+  theme_classic() +
+  geom_segment(aes(xend = x, yend = 0), linewidth = 3) +
+  geom_text(aes(label = plab), parse = TRUE,
+            hjust = 0, vjust = .7, nudge_x = .1, size = 10) +
+  scale_x_continuous(breaks = 0:8) +
+  coord_cartesian(ylim = c(0, 5/12), xlim = c(-0.5, 8.5), clip = "off") +
+  theme(
+    axis.text.x = element_text(size = 24),
+    axis.line.y = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.y = element_blank(),
+    plot.margin = unit(c(0, 0, 2, 0), "lines")
+  )
+```
+
+::::
+:::: {.column}
+
+What is the **expected** number of cups Michael drinks on any particular day? 
+
+::: {.fragment .note}
+$p(8)=1-\frac{1}{6}-\frac{1}{6}-\frac{1}{3}-\frac{1}{6}=\frac{1}{6}$
+:::
+
+::: {.incremental .nobullet}
++  $E[Y]=\sum_{y\in\{0,1,2,3,8\}}y p(y)$
+
++  $\phantom{E[Y]}=0\cdot\frac{1}{6} + 1 \cdot \frac{1}{6} + 2\cdot\frac{1}{3}$ $\phantom{E[Y]=}+ 3\cdot\frac{1}{6} + 8\cdot\frac{1}{6}$
+
++  $\phantom{E[Y]}=\frac{8}{3}\approx 2.667$
+:::
+::::
+:::::
+
+## {.center}
+
+::::: {.columns}
+:::: {.column}
+
+```{r}
+#| echo: false
+mean_coffee_cups <- sum(pmf_coffee_cups$x * pmf_coffee_cups$p)
+pmf_coffee_cups$plab[5] <- "frac(1,6)"
+ggplot(pmf_coffee_cups, aes(x = x, y = p)) +
+  theme_classic() +
+  geom_segment(aes(xend = x, yend = 0), linewidth = 3) +
+  geom_text(aes(label = plab), parse = TRUE,
+            hjust = 0, vjust = .7, nudge_x = .1, size = 10) +
+  scale_x_continuous(breaks = 0:8) +
+  coord_cartesian(ylim = c(0, 5/12), xlim = c(-0.5, 8.5), clip = "off") +
+  annotate("point", x = 2, y = -0.1,
+           pch = 17, size = 12, fill = palette()[3], color = palette()[3]) +
+  annotate("point", x = mean_coffee_cups, y = -0.1,
+           pch = 17, size = 12, fill = palette()[5], color = palette()[5]) +
+  theme(
+    axis.text.x = element_text(size = 24),
+    axis.line.y = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.y = element_blank(),
+    plot.margin = unit(c(0, 0, 2, 0), "lines")
+  ) 
+```
+
+::::
+:::: {.column}
+::: {.note .nobullet}
++   Both [mean]{.accent-five} and [median]{.accent-three} represent a centre of the distribution.
+:::
+::: {.note .nobullet}
++   The mean is the centre of probability mass on a scale of the random variable whereas the median is the mid-probability point regardless of the values of the random variable.
+:::
+::::
+:::::
+
+## {.center}
+
+::::: {.columns}
+:::: {.column}
+
+```{r}
+#| echo: false
+ggplot(pmf_coffee_cups, aes(x = x, y = p)) +
+  theme_classic() +
+  geom_segment(aes(xend = x, yend = 0), linewidth = 3) +
+  scale_x_continuous(breaks = 0:8) +
+  coord_cartesian(ylim = c(0, 5/12), xlim = c(-0.5, 8.5), clip = "off") +
+  annotate("point", x = 2, y = -0.05,
+           pch = 17, size = 12, fill = palette()[3], color = palette()[3]) +
+  annotate("point", x = mean_coffee_cups, y = -0.05,
+           pch = 17, size = 12, fill = palette()[5], color = palette()[5]) +
+  theme(
+    axis.text.x = element_blank(),
+    axis.line.y = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.y = element_blank(),
+    plot.margin = unit(c(0, 0, 2, 0), "lines")
+  )
+```
+
+::::
+:::: {.column}
+::: {.note .nobullet}
++   Imagine a scale with the centre at the [mean]{.accent-five} and bar weights at the random variable values. I will be perfectly balanced.
+:::
+
+::: {.note .nobullet}
++   If you collected the weights on the left of the [median]{.accent-three} and those on the right, they will be the same weight. 
+:::
+
+::: {.note .nobullet}
++   In general, you can make them the same by dividing the weight at the median if they are not the same.
+:::
+::::
+:::::
+
+## Example: Bernoulli distribution
+
+:::::: {.columns}
+::::: {.column}
+
+Suppose $B\sim\text{Ber}(0.7)$.
+
+What is $E[B]$?
+
+:::::
+::::: {.column}
+
+::: {.incremental .nobullet}
++  $E[B]=\sum_{b\in\{0,1\}}b \cdot p(b)$
++  $\phantom{E[B]}=0\cdot(1-0.7) + 1\cdot(0.7)$
++  $\phantom{E[B]}=0.7$
+:::
+
+:::::
+::::::
+
+## Expectation of a Bernoulli random variable {.half-title .center}
+
+::::: {.column width="45%"}
+
+In general,
+
+$$E[B]=\theta$$
+
+when $B\sim\text{Ber}(\theta)$.
+
+:::::
+
+::: {.full-height .right}
+
+<br />
+
+```{r}
+#| echo: false
+exb <- tibble(x = 0:1, d = c(0.3, 0.7))
+ggplot(exb, aes(x = x, y = d)) +
+  theme_void() +
+  geom_segment(aes(xend = x, yend = 0), linewidth = 3) +
+  annotate("point", x = 1, y = -0.08, size = 10,
+           pch = 17, fill = palette()[3], color = palette()[3]) +
+  annotate("point", x = 0.7, y = -0.08, size = 10,
+           pch = 17, fill = palette()[5], color = palette()[5]) +
+  annotate("text", x = 0.7, y = 0, size = 10, 
+           label = "theta", col = palette()[5], 
+           hjust = 0.5 , vjust = -1, parse = TRUE) +
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(breaks = 0:1) +
+  scale_y_continuous(limits = c(-.1, 0.8)) +
+  labs(title = expression(
+    paste("Probability mass function of B~Ber(", theta, ")")
+    ))+
+  theme(axis.text.x = element_text(size = 24),
+        plot.title = element_text(size = 26, hjust = 0.5),
+        plot.title.position = "plot")
+```
+:::
+
+
+## Example: Customer vs. passerby
+
+::::::: {.columns}
+:::::: {.column}
+
+Suppose the probability that any person passing by Michael's coffee shop
+buys a coffee from the shop is \(0.05\). How many non-customers do you expect to pass by before a customer comes in to the shop?
+
+::: {.note}
+For simplicity, assume independent and identically distributed events for each person passing by the shop.
+:::
+
+::: {.nobullet .fragment}
++  Let $N$ be the number of people passing by until the first customer including the customer. Then, $N\sim\text{Geo}(0.05)$.
+:::
+
+::::::
+:::::: {.column}
+
+::: {.nobullet .incremental}
++  Consider a general $N\sim\text{Geo}(\theta)$.
++  $E[N]=\sum_{x\in\{1,2,\ldots\}} x\cdot p_N(x)$
++  $\phantom{E[N]}=\sum_{x=1}^\infty \left[x \cdot (1 - \theta)^{x-1} \theta\right]$
++  $\phantom{E[N]}=\theta\cdot\sum_{x=1}^\infty \left[x(1-\theta)^{x-1}\right]$
++  $\phantom{E[N]}=\theta\cdot\frac{d}{d\theta}\left[-\sum_{x=1}^\infty (1-\theta)^x\right]$
++  $\phantom{E[N]}=\theta\cdot\frac{d}{d\theta}\left[-\left\{\sum_{x={\color{red}0}}^\infty(1-\theta)^x{\color{red}{-1}}\right\}\right]$
++  $\phantom{E[N]}=\theta\cdot\left[\frac{d}{d\theta}1- \frac{d}{d\theta}\sum_{x=0}^\infty(1-\theta)^x\right]$
+:::
+::: {.note .fragment}
+Recall a geometric series $\sum_{k=0}^\infty ar^k=\frac{a}{1-r}$ when $\lvert r\rvert<1$.
+:::
+::: {.nobullet .incremental}
++  $\phantom{E[N]}=\theta\cdot\frac{d}{d\theta}-\frac{1}{\theta}=\frac{1}{\theta}$
+:::
+::::::
+:::::::
+
+## Example: Customer vs. passerby
+
+::::::: {.columns}
+:::::: {.column}
+
+Recall $N\sim\text{Geo}(0.05)$ is the number of people passing by until the first customer including the customer.
+
+::::::
+:::::: {.column}
+
+::: {.nobullet .incremental}
++  $E[N]=1\left/0.05\right.=20$
++  Therefore, you should expect __19__ non-customers to pass by before the first customer.
+:::
+
+::::::
+:::::::
+
+
+## Expectation of a Geometric random variable {.half-title .center}
+
+::::: {.column width="45%"}
+
+In general,
+
+$$E[N]=\frac{1}{\theta}$$
+
+when $N\sim\text{Geo}(\theta)$.
+
+:::::
+
+::: {.full-height .right}
+
+<br />
+
+```{r}
+#| echo: false
+lott <- tibble(x = 1:50) %>% mutate(d = dgeom(x, 1/20))
+ggplot(lott, aes(x = x, y = d)) +
+  theme_void() +
+  geom_hline(yintercept = 0) +
+  geom_segment(aes(xend = x, yend = 0, color = x == 20), 
+               show.legend = FALSE, linewidth = 3) +
+  scale_fill_manual(values = c("black", palette()[5]), 
+                    aesthetics = c("color", "fill")) +
+  scale_x_continuous(breaks = c(0), limits = c(0, 51), labels = c(0)) +
+  annotate("point", x = qgeom(.5, 1/20), y = -0.005, size = 10,
+           pch = 17, fill = palette()[3], color = palette()[3]) +
+  annotate("point", x = 20, y = -0.005, size = 10,
+           pch = 17, fill = palette()[5], color = palette()[5]) +
+  annotate("text", x = 20, y = dgeom(20, 1/20), size = 10, 
+           label = "frac(1, theta)", col = palette()[5], 
+           hjust = 0.5 , vjust = -0.5, parse = TRUE) +
+  labs(title = expression(
+    paste("Probability mass function of N~Geo(", theta, ")")
+  ))+
+  theme(axis.text.x = element_text(size = 22),
+        plot.title = element_text(size = 26, hjust = 0.5),
+        plot.title.position = "plot")
+```
+
+:::
+
+
+# Expectation of a continuous random variable {.half-title .center}
+
+:::: {.full-height .right}
+::: {.definition}
+The **expectation** of a continuous random variable $X$ with probability density function $f$ is the number given by
+
+$$E\left[X\right]=\int_{-\infty}^\infty x f(x) dx.$$
+:::
+::::
+
+## Example: A continuous random variable
+
+:::::: {.columns}
+::::: {.column}
+
+Suppose $X$ is a continuous random variable with pdf $f$ defined by
+
+$$f(x)=\begin{cases} 12\cdot x\cdot\left(1-x\right)^2 &  x\in\left(0,1\right) \\ 0 & \text{otherwise.}\end{cases}$$
+Compute $E[X]$.
+
+:::::
+::::: {.column}
+::: {.nobullet .incremental}
+
++  $E[X]=\int_{-\infty}^\infty x\cdot f(x) dx$
++  $\phantom{E[X]}=\int_{-\infty}^0 x\cdot 0 dx$ $\phantom{E[X]=}+ \int_0^1 12\cdot x^2\cdot\left(1-x\right)^2 dx$ $\phantom{E[X]==}+ \int_1^\infty x \cdot 0 dx$
++  $\phantom{E[X]}=12 \cdot \int_0^1 \left(x^2 - 2x^3 + x^4\right) dx$
++  $\phantom{E[X]}=\cdots=2/5$
+
+:::
+
+:::::
+::::::
+
+::: {.fragment .text-center}
+
+```{r}
+#| echo: false
+#| fig-asp: 0.25
+ggplot() +
+  theme_void() +
+  geom_hline(yintercept = 0) +
+  geom_function(fun = dbeta, args = list(shape1 = 2, shape2 = 3),
+                xlim = c(0, 1)) +
+  scale_x_continuous(breaks = c(0, 1), limits = c(0, 1)) +
+  annotate("point", x = qbeta(.5, 2, 3), y = -0.3, size = 10,
+           pch = 17, fill = palette()[3], color = palette()[3]) +
+  annotate("point", x = 2/5, y = -0.3, size = 10,
+           pch = 17, fill = palette()[5], color = palette()[5]) +
+  annotate("text", x = 2/5, y = 0, size = 10, 
+           label = "frac(2, 5)", col = palette()[5], 
+           hjust = 0.5 , vjust = -0.1, parse = TRUE) +
+  labs(title = "Probability density function of X, f")+
+  theme(axis.text.x = element_text(size = 22),
+        plot.title = element_text(size = 26, hjust = 0.5),
+        plot.title.position = "plot")
+```
+
+:::
+
+
+## Example: Coffee machine failure
+
+:::::: {.columns}
+::::: {.column}
+
+Suppose Michael uses a coffee machine with time until failure of
+$W\sim\text{Exp}(1/2)$ in months.
+
+How long do you expect the machine to work without a failure?
+
+:::::
+::::: {.column}
+
+::: {.incremental .nobullet}
++  $E[W]=\int_{-\infty}^\infty w\cdot f(w) dw$
+
++  $\phantom{E[W]}=\int_{-\infty}^0 w\cdot 0 dw$ $\phantom{E[W]=}+ \int_0^\infty w\cdot \frac{1}{2}e^{-w/2} dw$
+
++  $\phantom{E[W]}=\int_0^\infty w\cdot \frac{1}{2}e^{-w/2} dw$
+:::
+
+:::::
+::::::
+
+## Example: Coffee machine failure
+
+::: {.nobullet}
++  $E[W]=\int_0^\infty w\cdot \frac{1}{2}e^{-w/2} dw$
+:::
+
+:::: {.fragment}
+::: {.note}
+Apply integration by parts, $\int_a^b u(x)v'(x)dx = \color{ForestGreen}{\left[u(x)v(x)\right]_a^b}-\color{DarkOrchid}{\int_a^b u'(x)v(x)dx}$.
+:::
+::: {.nobullet}
++  $\phantom{E[W]}=\color{ForestGreen}{\left[w\cdot \left(-e^{-w/2}\right)\right]_{w=0}^\infty} - \color{DarkOrchid}{\int_0^\infty 1\cdot \left(-e^{-w/2}\right)dw}$
+:::
+::::
+::: {.incremental .nobullet}
++  $\phantom{E[W]}=\color{ForestGreen}{\lim_{w\to\infty}\frac{w}{e^{w/2}} - 0} - \color{DarkOrchid}{\left[2e^{-w/2}\right]_{w=0}^\infty}$
+:::
+:::: {.fragment}
+::: {.note}
+Apply l'Hopital's rule for $\lim_{w\to\infty}w\left/e^{w/2}\right.$.
+:::
+::: {.nobullet}
++  $\phantom{E[W]}= \color{ForestGreen}{\lim_{w\to\infty}\frac{1}{e^{w/2}/2}} - \color{DarkOrchid}{\left(0 - 2\right)}$
++  $\phantom{E[W]}= \color{ForestGreen}{0}+\color{DarkOrchid}{2}$
++  $\phantom{E[W]}=2$
+:::
+::::
+
+## Expectation of an Exponential random variable {.half-title .center}
+
+::::: {.column width="45%"}
+
+In general,
+
+$$E[W]=\frac{1}{\lambda}$$
+
+when $W\sim\text{Exp}(\lambda)$.
+
+:::::
+
+::: {.full-height .right}
+
+<br />
+
+```{r}
+#| echo: false
+ggplot() +
+  theme_void() +
+  geom_function(fun = dexp, xlim = c(0, 5)) +
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(breaks = c(0), labels = c(0)) +
+  annotate("point", x = qexp(.5), y = -0.07, size = 10,
+           pch = 17, fill = palette()[3], color = palette()[3]) +
+  annotate("point", x = 1, y = -0.07, size = 10,
+           pch = 17, fill = palette()[5], color = palette()[5]) +
+  annotate("text", x = 1, y = 0, size = 10, 
+           label = "frac(1, lambda)", col = palette()[5], 
+           hjust = 0.5 , vjust = -0.2, parse = TRUE) +
+  labs(title = expression(
+    paste("Probability density function of W~Exp(", lambda, ")")
+  ))+
+  theme(axis.text.x = element_text(size = 22),
+        plot.title = element_text(size = 26, hjust = 0.5),
+        plot.title.position = "plot")
+```
+:::
+
+# Properties of an expectation {.half-title .center}
+
+:::: {.full-height .right}
+::: {.note .fragment}
++   An expectation may be infinite in magnitude  
+e.g., $Y=\infty$ or $0$ each with probability $1/2$ 
+:::
+::: {.note .fragment}
++   When $\sum_{\{i:x_i\ge0\}} x_i p(x_i)=\infty$ and $\sum_{\{i:x_i<0\}} x_i p(x_i) = -\infty$, an expectation **does not exist** for discrete random variables
++   When $\int_0^\infty x f(x) dx=\infty$ and $\int_{-\infty}^0 x f(x) dx = -\infty$, an expectation **does not exist** for continuous random variables
+:::
+::::
+
+## Example: St. Petersburg paradox
+
+::::::: {.columns}
+:::::: {.column}
+
+To play the St. Petersburg game, you start by betting \$2. At each round, you flip a fair coin. When it lands heads, your stake is doubled and you flip again. When it lands tails, the game ends and you take the money at stake.
+
+::: {.text-center}
+`r fontawesome::fa("coins", height = "1em")``r fontawesome::fa("coins", height = "1em")``r fontawesome::fa("coins", height = "1em")``r fontawesome::fa("coins", height = "1em")`
+
+`r fontawesome::fa("coins", height = "2em")``r fontawesome::fa("coins", height = "2em")`
+
+`r fontawesome::fa("coins", height = "4em")`
+:::
+::::::
+:::::: {.column}
+
+What is the expected amount you would be paid back if you played the game?
+
+::: {.incremental .nobullet}
++ If you flip tails on the first round, \$$2$.
++ If you flip the first tails on the second round, you win \$$4$.
++ ...
++ If you flip the first tails on the $n$th round, you win \$$2^n$ with a probability of $2^{-n}$.
++ The expected payout is $\sum_{n=1}^\infty 2^n2^{-n} = \sum_{n=1}^\infty 1=\infty$.
+:::
+
+::::::
+:::::::
+
+## Example: $E[X^2]$
+
+Suppose $X\sim\text{U}(0, 10)$ and $Y = X^2$.  Compute $E[X]$ and $E[Y]$.  
+(Dekking et al. Section 7.3)
+
+::::::: {.columns}
+:::::: {.column}
+
+:::: {.nobullet .incremental}
++  $E[X]=\int_0^{10} \frac{x}{10} dx = \left.\frac{x^2}{20}\right|_0^{10}=5$
+::::
+:::: {.nobullet .incremental}
++  To compute $E[Y]$, we can start with $F_Y$ then get $f_Y$.
++  For, $0< y \le 100$,
++  $F_Y(y)=P(Y\le y)=P(X^2 \le y)$
++  $\phantom{F_Y(y)}=P(-\sqrt{y} \le X \le \sqrt{y})$
++  $\phantom{F_Y(y)}=P(0\le X \le \sqrt{y})$
++  $\phantom{F_Y(y)}=\frac{\sqrt{y}}{10}$
+::::
+
+:::::: 
+:::::: {.column}
+
+:::: {.nobullet .incremental}
++  $\frac{d}{dy}\frac{\sqrt{y}}{10}=\frac{1}{20\sqrt{y}}$
++  $f_Y(y)=\begin{cases}
+  \frac{1}{20\sqrt{y}} & 0 < y \le 100 \\
+  0 & \text{otherwise}
+\end{cases}$
+::::
+:::: {.nobullet .incremental}
++  $E[Y]=\int_0^{100}y\cdot \frac{1}{20\sqrt{y}} dy = \frac{100}{3}$
+::::
+:::: {.fragment .note}
+$E[Y]\neq \left(E[X]\right)^2$
+::::
+
+:::: {.fragment .note}
+$\int_0^{100} \frac{\sqrt{y}}{20} dy=\int_0^{10} x^2 \cdot \frac{1}{10}dx$
+::::
+
+::::::
+:::::::
+
+## {.center}
+
+:::: {.note}
+$$E[Y]\neq \left(E[X]\right)^2$$
+::::
+
+```{r}
+#| layout-ncol: 2
+ggplot() +
+  theme_void() +
+  geom_segment(aes(x = 0, xend = 10, y = 0.1, yend = 0.1)) +
+  geom_segment(aes(x = -1, xend = 0, y = 0, yend = 0)) +
+  geom_segment(aes(x = 10, xend = 11, y = 0, yend = 0)) +
+  geom_segment(aes(x = 0, xend = 0, y = 0, yend = 0.1), linetype = "dotted") +
+  geom_segment(aes(x = 10, xend = 10, y = 0, yend = 0.1), linetype = "dotted") +
+  annotate("point", x = 5, y = 0.01, size = 10,
+           pch = 25, fill = palette()[5], color = palette()[5]) +
+  geom_hline(yintercept = -0.001) +
+  labs(title = "Probability density function of X", y = NULL, x = "x") +
+  scale_y_continuous(breaks = c(0, 0.1)) +
+  scale_x_continuous(breaks = c(0, 5, 10)) +
+  coord_cartesian(ylim = c(0, 0.11)) +
+  theme_sizes
+ggplot() +
+  theme_void() +
+  geom_function(fun = function(x) 1 / (20 * sqrt(x)), xlim = c(0.07, 100)) +
+  geom_hline(yintercept = -0.001) +
+  annotate("point", x = 100/3, y = 0.02, size = 10,
+           pch = 25, fill = palette()[5], color = palette()[5]) +
+  scale_x_continuous(breaks = c(0, 100/3, 100), labels = c("0", "100/3", "100")) +
+  scale_y_continuous(breaks = c(0, 0.1)) +
+  coord_cartesian(ylim = c(0, 0.2)) +
+  labs(title = "Probability density function of Y", y = NULL, x = expression(x^2)) +
+  theme_sizes
+
+```
+
+::: {.fragment}
+Alternatively, you can compute using
+
+$$E[Y]=E\left[X^2\right]=\int_{-\infty}^\infty x^2 f_X(x) dx$$
+:::
+
+
+## Change-of-variable for expectation {.half-title .center}
+
+:::: {.fragment .column width="45%"}
+::: {.note}
+The property implies that
+
++  $E\left(rX+ s\right)=r E\left(X\right) + s$ where $r$ and $s$ are constants; and
++  $E\left(X - E\left(X\right)\right)=0$ for any $X$.
+:::
+::::
+
+
+:::::: {.full-height .right}
+:::: {.definition}
+
+Let $X$ be a random variable, and let $g:\mathbb{R}\to\mathbb{R}$ be a function. **The change-of-variable** formula states that
+
+$$E\left[g\left(X\right)\right]=\sum_{i}g\left(a_i\right)P\left(X=a_i\right)$$
+
+if $X$ is discrete taking values $a_1, a_2, \ldots,$; and
+
+$$E\left[g\left(X\right)\right]=\int_{-\infty}^\infty g(x)f(x) dx$$
+
+if $X$ is continuous with probability density function $f$.
+::::
+::::::
+
+## Other properties of an expectation {.half-title .center}
+
+:::::: {.full-height .right}
+
+:::: {.note .fragment}
+Expectation of any _symmetric_ distribution is the point of symmetry.
+
+e.g., If $X\sim N(\mu,\sigma^2)$, then $E(X)=\mu$.
+::::
+:::: {.fragment .note}
+Expectation of a constant is the constant. That is, there is no randomness.
+
+e.g., $E\left[E\left(X\right)\right]$ for any random variable $X$ is $E(X)$.
+::::
+
+::::::
+
+
+## Example: My coffee shop {.half-title}
+
+```{r}
+#| echo: false
+pcoffee
+```
+
+:::: {.full-height .right}
+
+<br />
+
+::: {.nobullet}
++  The daily number of customers, $D$, follows $\text{Pois}(4)$.
++  How many customers does he expect per day? 
++  How variable are daily customer counts?
+:::
+::::
+
+## {}
+### Expectation of $D$
+
+:::: {.nobullet .fragment}
++  $E[D]=\sum_{x=0}^\infty x\cdot\frac{\color{orange}{e^{-4}}4^x}{x!}=\color{orange}{e^{-4}}\sum_{x=0}^\infty x\cdot\frac{4^x}{x!}$
+::::
+::::: {.fragment}
+:::: {.note}
+When $x=0$, $x\frac{4^x}{x!}=0$.
+::::
+:::: {.nobullet}
++  $\phantom{E[D]}=\color{orange}{e^{-4}}\sum_{x=\color{red}{1}}^\infty \color{ForestGreen}{x}\cdot \frac{\color{DarkOrchid}{4^x}}{\color{ForestGreen}{x!}}$
+::::
+:::::
+:::: {.nobullet .fragment}
++  $\phantom{E[D]}=\color{orange}{e^{-4}}\sum_{x=1}^\infty\frac{\color{DarkOrchid}{4^{x-1}\cdot4}}{\color{ForestGreen}{(x-1)!}} =\color{DarkOrchid}{4}\cdot\color{orange}{e^{-4}}\sum_{\color{red}{x'=0}}\frac{\color{DarkOrchid}{4^{x'}}}{\color{ForestGreen}{x'!}}$
+::::
+::::: {.fragment}
+:::: {.note}
+Taylor Series expansion for $e^u=\sum_{t=0}^\infty \left.u^t\right/t!$.
+::::
+:::: {.nobullet}
++  $\phantom{E[D]}=\color{DarkOrchid}{4} \cdot\color{orange}{e^{-4}} \cdot \color{ForestGreen}{e^{4}} =4$
+::::
+:::::
+
+## Expectation of a Poisson random variable {.half-title .center}
+
+::::: {.column width="45%"}
+
+In general,
+
+$$E[D]=\lambda$$
+
+when $D\sim\text{Pois}(\lambda)$.
+
+::: {.note .fragment}
+We defined $\lambda$ to be the _expected rate_ of event in our construction of the Poisson distribution.
+:::
+
+:::::
+
+::: {.full-height .right}
+
+<br />
+
+```{r}
+#| echo: false
+poisdd <- tibble(x = 1:15) %>% mutate(d = dpois(x, 4))
+ggplot(poisdd, aes(x = x, y = d)) +
+  theme_void() +
+  geom_hline(yintercept = 0) +
+  geom_segment(aes(xend = x, yend = 0, color = x == 4), 
+               show.legend = FALSE, linewidth = 3) +
+  scale_fill_manual(values = c("black", palette()[5]), 
+                    aesthetics = c("color", "fill")) +
+  scale_x_continuous(breaks = c(0), labels = c(0)) +
+  annotate("point", x = qpois(.5, 4), y = -0.005, size = 10,
+           pch = 17, fill = palette()[3], color = palette()[3]) +
+  annotate("point", x = 4, y = -0.005, size = 10,
+           pch = 17, fill = palette()[5], color = palette()[5]) +
+  annotate("text", x = 4, y = dpois(4, 4), size = 10, 
+           label = "frac(1, theta)", col = palette()[5], 
+           hjust = 0.5 , vjust = -0.5, parse = TRUE) +
+  labs(title = expression(
+    paste("Probability mass function of D~Pois(", lambda, ")")
+  ))+
+  theme(axis.text.x = element_text(size = 22),
+        plot.title = element_text(size = 26, hjust = 0.5),
+        plot.title.position = "plot")
+```
+
+:::
+
+## Example: My coffee shop {.half-title}
+
+```{r}
+#| echo: false
+pcoffee
+```
+
+:::: {.full-height .right}
+
+<br />
+
+::: {.nobullet}
++  _[How variable are daily customer counts?]{.accent-five}_
+    +  _How can we measure the variability?_
+:::
+::: {.incremental}
++  We want to measure the variability around the mean, $E[D]$
++  $D-E[D]$ provides a distribution of the displacement of $D$ from $E[D]$
++  We use $E\left[\left(D-E[D]\right)^2\right]$ to measure the variability of the distribution
+:::
+
+::::
+
+
+
+
+# Variance {.half-title .center}
+
+:::: {.fragment .column width="45%"}
+::: {.note}
+$\text{Var}(X) \ge 0$ for any (random) variable.
+:::
+::: {.note}
+$\text{Var}(X) = 0$ implies no variability and $X$ is a constant.
+:::
+::::
+
+
+:::::: {.full-height .right}
+
+<br />
+
+::: {.definition}
+The **variance** $\text{Var}(X)$ of a random variable $X$ is the number defined by
+
+$$\text{Var}(X)=E\left[\left(X-E\left[X\right]\right)^2\right].$$
+
+:::
+::::::
+
+
+## Example: Coffee cups
+
+::::: {.columns}
+:::: {.column}
+
+Recall Michael drinks $Y$ cups of coffee  
+per day with the pmf, $p_Y$, shown below.
+
+```{r}
+pmf_coffee_cups$plab[5] <- "frac(1,6)"
+ggplot(pmf_coffee_cups, aes(x = x, y = p)) +
+  theme_classic() +
+  geom_segment(aes(xend = x, yend = 0), linewidth = 3) +
+  geom_text(aes(label = plab), parse = TRUE,
+            hjust = 0, vjust = .7, nudge_x = .1, size = 10) +
+  annotate("point", x = mean_coffee_cups, y = -0.1,
+           pch = 17, size = 12, fill = palette()[5], color = palette()[5]) +
+  scale_x_continuous(breaks = 0:8) +
+  coord_cartesian(ylim = c(0, 5/12), xlim = c(-0.5, 8.5), clip = "off") +
+  theme(
+    axis.text.x = element_text(size = 24),
+    axis.line.y = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.y = element_blank(),
+    plot.margin = unit(c(0, 0, 2, 0), "lines")
+  )
+```
+
+::::
+:::: {.column}
+
+Compute $\text{Var}(Y)$.
+
+::: {.nobullet .incremental}
++ $\text{Var}(Y)=\sum_{y\in\{0,1,2,3,8\}} \left(y-E[Y]\right)^2 p_Y(y)$
+:::
+
+::::
+:::::
+
+## Example: Coffee cups
+
+::::: {.columns}
+:::: {.column}
+
+Recall Michael drinks $Y$ cups of coffee  
+per day with the pmf, $p_Y$, shown below.
+
+```{r}
+pmf_coffee_cups$plab[5] <- "frac(1,6)"
+ggplot(pmf_coffee_cups[c(1,2,3,5,4), ], aes(x = x, y = p)) +
+  theme_classic() +
+  geom_vline(xintercept = mean_coffee_cups, linetype = 3) +
+  geom_segment(aes(xend = x, yend = 0), linewidth = 3, color = "darkgrey") +
+  geom_segment(aes(x = mean_coffee_cups, xend = x, y = 0, yend = 0, color = factor(x)), 
+               linewidth = 3, arrow = arrow()) +
+  geom_text(aes(label = plab), parse = TRUE,
+            hjust = 0, vjust = .7, nudge_x = .1, size = 10) +
+  annotate("point", x = mean_coffee_cups, y = -0.1,
+           pch = 17, size = 12, fill = "black", color = "black") +
+  scale_x_continuous(breaks = 0:8) +
+  scale_color_manual(values = c(palette()[1:3], "red", palette()[5]), guide = "none") +
+  coord_cartesian(ylim = c(0, 5/12), xlim = c(-0.5, 8.5), clip = "off") +
+  theme(
+    axis.text.x = element_text(size = 24),
+    axis.line.y = element_blank(),
+    axis.title = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text.y = element_blank(),
+    plot.margin = unit(c(0, 0, 2, 0), "lines")
+  )
+```
+
+::::
+:::: {.column}
+
+Compute $\text{Var}(Y)$.
+
+::: {.nobullet}
++ $\text{Var}(Y)=\sum_{y\in\{0,1,2,3,8\}} \left(y-E[Y]\right)^2 p_Y(y)$
+:::
+::: {.nobullet}
++ $\phantom{\text{Var}(Y)}=$[$\left(0-E[Y]\right)^2 p_Y(0)$]{.accent-one}
++ $\phantom{\text{Var}(Y)=}+$[$\left(1-E[Y]\right)^2 p_Y(1)$]{.accent-two}
++ $\phantom{\text{Var}(Y)=}+$[$\left(2-E[Y]\right)^2 p_Y(2)$]{.accent-three}
++ $\phantom{\text{Var}(Y)=}+$[$\left(3-E[Y]\right)^2 p_Y(3)$]{.red-text}
++ $\phantom{\text{Var}(Y)=}+$[$\left(8-E[Y]\right)^2 p_Y(8)$]{.accent-five}
+:::
+::: {.nobullet .fragment}
++ $\phantom{\text{Var}(Y)}\approx6.556$
+:::
+::::
+:::::
+
+## {}
+### Alternatively ...
+
+:::::: {.columns}
+::::: {.column width="60%"}
+:::: {.nobullet .incremental}
++  $\text{Var}(X)=E\left[\left(X-E[X]\right)^2\right]$
++  $\phantom{\text{Var}(X)}=E\left[X^2-2E[X]X+E[X]^2\right]$
++  $\phantom{\text{Var}(X)}=E\left[X^2\right]-\color{ForestGreen}{E\left[2E[X]X\right]}+\color{DarkOrchid}{E\left[E[X]^2\right]}$
+::::
+:::: {.fragment}
+::: {.note}
+$E\left(rX+ s\right)=r E\left(X\right) + s$ where $r$ and $s$ are constants.
+:::
+::: {.nobullet}
++  $\phantom{\text{Var}(X)}=E\left[X^2\right]-\color{ForestGreen}{2E[X]E[X]}+\color{DarkOrchid}{E[X]^2}$
+:::
+::::
+::: {.nobullet .fragment}
++  $\phantom{\text{Var}(X)}=E\left[X^2\right]-E[X]^2$
+:::
+:::::
+::::: {.column width="40%" .fragment}
+::: {.definition}
+$$\text{Var}(X)$$
+$$=E\left[X^2\right]-E[X]^2$$
+
+for any random variable $X$.
+:::
+
+All you need is $E(X^2)\text{ & }E(X)$ to compute the variance.
+
+:::::
+::::::
+
+
+
+## Example: Coffee cups
+
+
+Let's check with $Y$, Michael's daily coffee consumption in cups.
+
+::: {.note}
+$\text{Var}(Y)=E\left[\left(Y-E[Y]\right)^2\right]\approx6.556$
+:::
+
+::: {.nobullet .incremental}
++ $E\left(Y^2\right)=1^2\cdot p_Y(1)+2^2\cdot p_Y(2)+ 3^2\cdot p_Y(3)+8^2\cdot p_Y(8)$
++ $\phantom{E\left(Y^2\right)}=\frac{1}{6} + \frac{4}{3} + \frac{9}{6} + \frac{64}{6}$
++ $\phantom{E\left(Y^2\right)}=\frac{41}{3}$
+:::
+
+::: {.nobullet .fragment}
++  $E\left(Y\right)^2=\left(\frac{8}{3}\right)^2=\frac{64}{9}$
+:::
+
+::: {.nobullet .fragment}
++ $E\left(Y^2\right) - E\left(Y\right)^2=\frac{41}{3}-\frac{64}{9}=\frac{59}{9}\approx6.556$
+:::
+
+
+## Other properties of a variance {.half-title .center}
+
+:::::: {.full-height .right}
+
+:::: {.note .fragment}
+Variance of a constant is zero.
+
+i.e., $\text{Var}(a)=E\left[a^2\right] - \left(E\left[a\right]\right)^2$  
+$=a^2 - a^2 = 0$.
+:::: 
+:::: {.note .fragment}
+For any random variable $X$, and constants $r$ and $s$,
+
+$$\text{Var}(rX + s)=r^2\text{Var}(X)$$
+::::
+::::::
+
+## Standard deviation {.half-title .center}
+
+:::: {.fragment .column width="45%"}
+::: {.note}
+$\text{sd}(X)$ is another measure of variability.
+:::
+::: {.note}
+You need $\text{Var}(X)$ to compute standard deviation.
+:::
+::: {.note}
+$\text{sd}(X)$ is in the same unit as the random variable.
+:::
+::::
+
+
+:::::: {.full-height .right}
+
+<br />
+
+::: {.definition}
+The **standard deviation** $\text{sd}(X)$ of a random variable $X$ is the number defined by
+
+$$\text{sd}(X)=\sqrt{\text{Var}\left(X\right)}.$$
+
+:::
+::::::
+
+
+# R worksheet
+
+## Install `learnr` and run R worksheet {.half-title}
+
+:::: {.column width="45%"}
+1.   Click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main) to install `learnr` on [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+
+2.   Follow [this link](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Frlesson05&urlpath=shiny%2Frlesson05%2F&branch=main) to open the worksheet
+::::
+
+:::: {.full-height .right}
+
+<br />
+<br />
+
+If you seen an error, try:
+
+::: {.note}
+1. Log in to [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2. Find `rlesson05` from _Files_ pane
+3. Click _Run Document_ 
+:::
+
+Other steps you may try:
+
+::: {.note}
+1.  Remove any `.Rmd` and `.R` files on the home directory of [r.datatools.utoronto.ca](https://r.datatools.utoronto.ca)
+2.  In RStudio, 
+    i. Click `Tools` > `Global Options`
+    ii. Uncheck _"Restore most recently opened project at startup"_
+3.  Run `install.packages("learnr")` in RStudio after the steps above or click [here](https://r.datatools.utoronto.ca/hub/user-redirect/git-pull?repo=https%3A%2F%2Fgithub.com%2Fsta237%2Finstall_learnr&urlpath=shiny%2Finstall_learnr%2F&branch=main)
+:::
+
+::::
+
+
+# Summary
+
+::::: {.columns}
+:::: {.column}
+:::: 
+:::: {.column}
+
++  Given a probability distribution, we can use mean and variance to summarise its behaviour
++  Mean represents the centre of probability mass and variance is a metric for the variability around the mean.
++  Means and variances of common distributions can often be expressed in terms of the parameters when they exist
+
+::::
+:::::
+
+## Practice questions {.center}
+
+Chapter 7, [Dekking et al.](https://librarysearch.library.utoronto.ca/permalink/01UTORONTO_INST/14bjeso/alma991106910545806196)
+
++   Quick Exercises 7.1, 7.2, and 7.4
++   Read Remark 7.1 (page 92)
++   All exercises from the chapter
+
++   See a collection of corrections by the author [here](https://www.tudelft.nl/ewi/over-de-faculteit/afdelingen/applied-mathematics/applied-probability/education/mips)
+
+
